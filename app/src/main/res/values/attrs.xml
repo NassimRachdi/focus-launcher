@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="fBg" format="color" />
+    <attr name="fPanel" format="color" />
+    <attr name="fPanel2" format="color" />
+    <attr name="fLine" format="color" />
+    <attr name="fTxt" format="color" />
+    <attr name="fMute" format="color" />
+</resources>

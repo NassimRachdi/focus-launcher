@@ -1,0 +1,2 @@
+-keep class fr.nassim.focuslauncher.MediaListener { *; }
+-keep class fr.nassim.focuslauncher.GaugeView { *; }

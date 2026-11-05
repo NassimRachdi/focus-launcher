@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Focus.Base" parent="android:Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowShowWallpaper">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+    <style name="Theme.Focus.Night" parent="Theme.Focus.Base">
+        <item name="fBg">#0B0C0F</item>
+        <item name="fPanel">#15171C</item>
+        <item name="fPanel2">#1C1F26</item>
+        <item name="fLine">#262A33</item>
+        <item name="fTxt">#F2F3F5</item>
+        <item name="fMute">#8A909C</item>
+        <item name="android:windowBackground">@color/night_bg</item>
+    </style>
+    <style name="Theme.Focus.Day" parent="Theme.Focus.Base">
+        <item name="fBg">#E9EBEF</item>
+        <item name="fPanel">#FFFFFF</item>
+        <item name="fPanel2">#F3F4F7</item>
+        <item name="fLine">#DCDFE5</item>
+        <item name="fTxt">#14161A</item>
+        <item name="fMute">#5D6470</item>
+        <item name="android:windowBackground">@color/day_bg</item>
+    </style>
+
+    <!-- Styles de texte -->
+    <style name="T.Label">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">?attr/fMute</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:singleLine">true</item>
+    </style>
+    <style name="T.Value">
+        <item name="android:textSize">26sp</item>
+        <item name="android:textColor">?attr/fTxt</item>
+        <item name="android:singleLine">true</item>
+    </style>
+    <style name="Card">
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:padding">12dp</item>
+    </style>
+    <style name="RailBtn">
+        <item name="android:layout_width">58dp</item>
+        <item name="android:layout_height">58dp</item>
+        <item name="android:layout_marginTop">6dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">?attr/fMute</item>
+        <item name="android:drawablePadding">2dp</item>
+        <item name="android:background">@drawable/bg_rail</item>
+        <item name="android:clickable">true</item>
+    </style>
+    <style name="Tile">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">5dp</item>
+        <item name="android:layout_marginEnd">5dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">?attr/fTxt</item>
+        <item name="android:drawablePadding">5dp</item>
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:clickable">true</item>
+        <item name="android:paddingTop">10dp</item>
+    </style>
+    <style name="Chip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:layout_marginEnd">10dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">?attr/fTxt</item>
+        <item name="android:background">@drawable/bg_chip</item>
+        <item name="android:clickable">true</item>
+    </style>
+</resources>
