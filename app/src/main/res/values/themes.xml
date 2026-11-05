@@ -28,14 +28,14 @@
     </style>
 
     <!-- Styles de texte -->
-    <style name="T.Label">
+       <style name="T.Label" parent="">
         <item name="android:textSize">11sp</item>
         <item name="android:textColor">?attr/fMute</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:letterSpacing">0.08</item>
         <item name="android:singleLine">true</item>
     </style>
-    <style name="T.Value">
+       <style name="T.Value" parent="">
         <item name="android:textSize">26sp</item>
         <item name="android:textColor">?attr/fTxt</item>
         <item name="android:singleLine">true</item>
