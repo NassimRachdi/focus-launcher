@@ -172,14 +172,14 @@ class DiagActivity : Activity() {
             col.addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         }
         btn("Essai : son Bluetooth") {
-            val ok = MtcAudio.enterBluetooth(this)
-            BtDiag.note("essai av_channel_enter=gsm_bt" + if (ok) "" else " (refusé)")
-            toast(if (ok) "Commande envoyée : son Bluetooth" else "Commande refusée")
+            val r = MtcAudio.enterBluetooth(this)
+            BtDiag.note("essai av_channel_enter=gsm_bt → code $r")
+            toast(if (r == 0) "Commande acceptée : son Bluetooth" else "Code $r (0 = accepté, -1 = permission refusée)")
         }
         btn("Essai : son Android") {
-            val ok = MtcAudio.enterSystem(this)
-            BtDiag.note("essai av_channel_enter=sys" + if (ok) "" else " (refusé)")
-            toast(if (ok) "Commande envoyée : son Android" else "Commande refusée")
+            val r = MtcAudio.enterSystem(this)
+            BtDiag.note("essai av_channel_enter=sys → code $r")
+            toast(if (r == 0) "Commande acceptée : son Android" else "Code $r (0 = accepté, -1 = permission refusée)")
         }
         btn("Journal noyau (MTC)") { toast("Lecture…"); BtDiag.readKernel { ui.post { render() } } }
         capBtn = btn("Capture du journal") {
@@ -234,7 +234,8 @@ class DiagActivity : Activity() {
         sb.append("Focus Launcher v").append(BuildConfig.VERSION_CODE)
             .append("  ·  root : ").append(BtDiag.root)
             .append("  ·  capture : ").append(if (BtDiag.capturing) "EN COURS" else "arrêtée").append('\n')
-        sb.append("Canal audio actuel : ").append(BtDiag.channel.ifEmpty { "(illisible)" }).append('\n')
+        sb.append("Canal audio actuel : ").append(BtDiag.channel.ifEmpty { "(illisible)" })
+            .append("  ·  permission audio : ").append(if (MtcAudio.hasPermission(this)) "OK" else "ABSENTE").append('\n')
         sb.append("\nHISTORIQUE :\n")
         synchronized(BtDiag.history) { BtDiag.history.forEach { sb.append("  ").append(it).append('\n') } }
         sb.append("\nJOURNAL NOYAU (MTC) :\n")
