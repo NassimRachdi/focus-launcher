@@ -413,7 +413,7 @@ class MainActivity : Activity() {
         val g = v<GridView>(R.id.page_apps)
         g.adapter = gridAdapter
         g.setOnItemClickListener { _, _, p, _ ->
-            if (p >= gridItems.size) { Updater.check(this, true, ::onUpdateResult); toast("Recherche de mise à jour…"); return@setOnItemClickListener }
+            if (p >= gridItems.size) { checkUpdateNow(); return@setOnItemClickListener }
             try { startActivity(gridItems[p].intent) } catch (_: Exception) { toast("Impossible d'ouvrir ${gridItems[p].label}") }
         }
         g.setOnItemLongClickListener { _, _, p, _ ->
@@ -437,9 +437,19 @@ class MainActivity : Activity() {
         v<TextView>(R.id.st_update).setOnClickListener { Updater.install(this, ::toast) }
     }
 
+    /** Vérification automatique (au plus toutes les 6 h) : bandeau en haut si une version existe. */
     private fun onUpdateResult(available: Boolean, msg: String) {
         v<TextView>(R.id.st_update).visibility = if (available) View.VISIBLE else View.GONE
-        if (!available && msg.isNotEmpty() && pages.indexOfFirst { findViewById<View>(it).visibility == View.VISIBLE } == 3) toast(msg)
+    }
+
+    /** Tuile « Mises à jour » : vérifie tout de suite, affiche le résultat et installe directement. */
+    private fun checkUpdateNow() {
+        toast("Recherche de mise à jour…")
+        Updater.check(this, true) { available, msg ->
+            onUpdateResult(available, msg)
+            toast(msg)
+            if (available) Updater.install(this, ::toast)
+        }
     }
 
     // ---------------------------------------------------------------- horloge

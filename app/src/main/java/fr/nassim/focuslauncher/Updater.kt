@@ -3,18 +3,23 @@ package fr.nassim.focuslauncher
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
+import java.net.UnknownHostException
+import java.util.Calendar
+import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLException
 
 /**
  * Mise à jour sans clé USB : lit version.json publié par GitHub Actions
  * ({"versionCode": 12, "apk": "https://…/focus-launcher.apk"}), télécharge l'APK
- * puis ouvre l'installeur Android. Tout se fait par le partage de connexion du téléphone.
+ * puis l'installe : en silence par root (`pm install -r`) si l'autoradio le permet,
+ * sinon avec l'installeur Android. Tout se fait par le partage de connexion du téléphone.
  */
 object Updater {
     private val ui = Handler(Looper.getMainLooper())
@@ -44,14 +49,14 @@ object Updater {
                     msg = "Version $remote disponible"
                 } else msg = "Déjà à jour (v${BuildConfig.VERSION_CODE})"
             } catch (e: Exception) {
-                msg = "Pas de connexion au serveur de mise à jour"
+                msg = "Mise à jour impossible : " + reason(e)
             }
             busy = false
             ui.post { onResult(available, msg) }
         }, "update-check").start()
     }
 
-    /** Télécharge l'APK puis lance l'installeur. */
+    /** Télécharge l'APK puis l'installe (root en silence, sinon installeur Android). */
     fun install(ctx: Context, onMsg: (String) -> Unit) {
         val apk = pendingApk ?: return
         if (busy) return
@@ -60,20 +65,58 @@ object Updater {
         val app = ctx.applicationContext
         Thread({
             try {
-                val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                dir.mkdirs()
+                // Dossier privé de l'appli : lisible par root et par l'installeur (targetSdk 22, file:// autorisé)
+                val dir = app.filesDir
                 val f = File(dir, "focus-launcher-update.apk")
                 download(apk, f)
-                ui.post {
-                    val i = Intent(Intent.ACTION_VIEW)
-                        .setDataAndType(Uri.fromFile(f), "application/vnd.android.package-archive")
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    app.startActivity(i)
+                dir.setExecutable(true, false)
+                f.setReadable(true, false)
+                ui.post { onMsg("Installation…") }
+                // En cas de succès, Android remplace l'appli et le launcher redémarre tout seul.
+                if (!rootInstall(f)) {
+                    ui.post {
+                        val i = Intent(Intent.ACTION_VIEW)
+                            .setDataAndType(Uri.fromFile(f), "application/vnd.android.package-archive")
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        try { app.startActivity(i) } catch (e: Exception) { onMsg("Installeur introuvable : ${e.message}") }
+                    }
                 }
             } catch (e: Exception) {
-                ui.post { onMsg("Échec du téléchargement : ${e.message}") }
+                ui.post { onMsg("Échec du téléchargement : " + reason(e)) }
             } finally { busy = false }
         }, "update-dl").start()
+    }
+
+    /**
+     * Installation silencieuse par root. Le fichier est d'abord copié dans /data/local/tmp,
+     * toujours lisible par le gestionnaire de paquets. false si root est absent ou refusé.
+     */
+    private fun rootInstall(f: File): Boolean {
+        val tmp = "/data/local/tmp/focus-launcher.apk"
+        val cmd = "cat '${f.absolutePath}' > $tmp && chmod 644 $tmp && pm install -r $tmp; rm -f $tmp"
+        return try {
+            val p = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
+            val out = StringBuilder()
+            val reader = Thread({ try { out.append(p.inputStream.bufferedReader().readText()) } catch (_: Exception) {} }, "update-su")
+            reader.start()
+            reader.join(TimeUnit.SECONDS.toMillis(120)) // laisse le temps d'accepter une éventuelle demande root
+            if (reader.isAlive) { p.destroy(); return false }
+            out.contains("Success")
+        } catch (_: Exception) {
+            false // pas de binaire su
+        }
+    }
+
+    /** Explication lisible de l'erreur, pour savoir quoi corriger. */
+    private fun reason(e: Exception): String {
+        val year = Calendar.getInstance().get(Calendar.YEAR)
+        return when {
+            e is SSLException && year < 2025 -> "date de l'autoradio incorrecte ($year), règle-la puis réessaie"
+            e is UnknownHostException -> "pas d'Internet (partage de connexion activé ?)"
+            e is SocketTimeoutException -> "connexion trop lente, réessaie"
+            e is SSLException -> "connexion sécurisée refusée (${e.message})"
+            else -> "${e.javaClass.simpleName} ${e.message ?: ""}".trim()
+        }
     }
 
     private fun open(u: String): HttpURLConnection {
