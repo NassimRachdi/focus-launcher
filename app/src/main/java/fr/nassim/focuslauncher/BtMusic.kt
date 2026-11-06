@@ -1,11 +1,14 @@
 package fr.nassim.focuslauncher
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.view.KeyEvent
 
 /**
@@ -69,10 +72,70 @@ object BtMusic {
         }
     }
 
+    // ------------------------------------------------------------ bascule automatique du son
+
+    private const val TAG = "FocusBT"
+    private const val BOOTCHECK = "com.microntek.bootcheck"
+    private const val BT_APP = "com.microntek.bluetooth"
+
+    /** Regroupe les lignes d'un même changement (MA, MB, MI se suivent) et l'historique du démarrage. */
+    private const val AUTO_DELAY_MS = 600L
+
+    /** Durée après le démarrage de l'autoradio pendant laquelle l'historique du journal compte aussi. */
+    private const val BOOT_WINDOW_MS = 300_000L
+
+    private var appCtx: Context? = null
+
+    /** Dernière source MTC (radio, lecteur SD, DVD…) qui s'est annoncée depuis notre dernière prise du son. */
+    private var otherSource: String? = null
+
+    /**
+     * Les applis MTC qui prennent le son l'annoncent par ce broadcast (extra « class » = leur paquet).
+     * Tant qu'une autre source s'est annoncée, on ne lui reprend pas le son automatiquement.
+     */
+    private val sourceRx = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            val cls = i.getStringExtra("class") ?: return
+            otherSource = if (cls == BT_APP || cls.startsWith("phonecall")) null else cls
+            Log.i(TAG, "source MTC annoncée : $cls")
+        }
+    }
+
+    private val autoSwitch = Runnable { switchToBluetooth() }
+
+    /**
+     * Après un redémarrage, l'autoradio reste sur le son Android : rien ne passe sur l'entrée Bluetooth
+     * tant qu'une commande ne l'a pas demandé (l'appli Bluetooth d'origine le fait à son ouverture).
+     * Dès que le module annonce une lecture, on envoie donc la même commande que le bouton « Musique BT »,
+     * sauf si un lecteur Android joue ou si une autre source MTC s'est annoncée entre-temps.
+     */
+    private fun switchToBluetooth() {
+        val ctx = appCtx ?: return
+        if (!playing) return
+        if (NowPlaying.controller?.playbackState?.state == PlaybackState.STATE_PLAYING) {
+            Log.i(TAG, "pas de bascule auto : un lecteur Android joue"); return
+        }
+        val other = otherSource
+        if (other != null) { Log.i(TAG, "pas de bascule auto : source $other annoncée"); return }
+        val r = MtcAudio.enterBluetooth(ctx)
+        Log.i(TAG, "bascule auto du son sur Bluetooth : code $r, canal relu « ${MtcAudio.channel(ctx)} »")
+    }
+
+    private fun scheduleAutoSwitch() {
+        ui.removeCallbacks(autoSwitch)
+        ui.postDelayed(autoSwitch, AUTO_DELAY_MS)
+    }
+
+    /** À appeler quand l'utilisateur prend lui-même le son Bluetooth (bouton « Musique BT »). Thread UI. */
+    fun sourceTaken() { otherSource = null }
+
     /** Lance le suivi (une seule fois pour toute la vie du processus). Sans effet si root est absent. */
-    fun start() {
+    fun start(ctx: Context) {
         if (started) return
         started = true
+        val app = ctx.applicationContext
+        appCtx = app
+        try { app.registerReceiver(sourceRx, IntentFilter(BOOTCHECK)) } catch (_: Exception) {}
         Thread({ loop() }, "bt-music").apply { isDaemon = true }.start()
     }
 
@@ -87,7 +150,10 @@ object BtMusic {
                     for (l in lines) {
                         val ev = BtMusicParser.parse(l) ?: continue
                         val live = SystemClock.elapsedRealtime() - t0 > HISTORY_MS
-                        ui.post { onEvent(ev, live) }
+                        // L'historique ne vaut pour la bascule du son que juste après le démarrage de
+                        // l'autoradio (le journal est alors celui de ce démarrage, donc récent).
+                        val auto = live || t0 < BOOT_WINDOW_MS
+                        ui.post { onEvent(ev, live, auto) }
                     }
                 }
             } catch (_: Exception) {
@@ -100,7 +166,7 @@ object BtMusic {
         }
     }
 
-    private fun onEvent(ev: BtMusicParser.Event, live: Boolean) {
+    private fun onEvent(ev: BtMusicParser.Event, live: Boolean, auto: Boolean) {
         val now = SystemClock.elapsedRealtime()
         when (ev) {
             is BtMusicParser.Track -> {
@@ -109,6 +175,7 @@ object BtMusic {
                 posAt = now
                 if (!stateSeen) playing = ev.title.isNotEmpty()
                 publish(takeOver = true)
+                if (auto && playing) scheduleAutoSwitch()
             }
             is BtMusicParser.State -> {
                 stateSeen = true
@@ -118,6 +185,7 @@ object BtMusic {
                 playing = ev.playing
                 // Une pause Bluetooth ne reprend pas l'affichage à un lecteur Android
                 publish(takeOver = ev.playing)
+                if (!ev.playing) ui.removeCallbacks(autoSwitch) else if (auto) scheduleAutoSwitch()
             }
         }
     }

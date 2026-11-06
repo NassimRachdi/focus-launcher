@@ -43,6 +43,17 @@ Téléphone : **iPhone**, musique sur **Apple Music**. PC de l'utilisateur : **W
   Après un redémarrage, le canal passe sur `gsm_bt` tout seul (45 s après le boot, sans action du launcher)
   et le son de l'iPhone arrive dès la connexion. Avant ce redémarrage, le journal noyau montrait une
   alternance `gsm_bt` → `sys` → `gsm_bt` à 0,5 s d'intervalle, auteur du `sys` non identifié.
+- **Qui prend le canal** (lu dans la copie de `/system`) : `av_channel_enter/exit` est traité par
+  `libaudioflinger.so` (modifié par MTC, écrit dans `/dev/mtc-car`), pas par le HAL. `MicrontekServer` ne
+  restaure aucun canal au démarrage. Seule l'appli Bluetooth d'origine (à son ouverture) et notre launcher
+  envoient `av_channel_enter=gsm_bt` ; rien ne le fait quand le téléphone se met simplement à jouer.
+- **Arbitrage des sources** : une appli MTC qui prend le son diffuse `com.microntek.bootcheck` (extra `class` =
+  son paquet). À cette annonce, le service Bluetooth arrête la musique du téléphone (`AT-MC`) si la source
+  n'est pas le Bluetooth. Le launcher écoute ce broadcast pour ne pas reprendre le son à la radio.
+- **Bascule automatique (à valider)** : `BtMusic` envoie `av_channel_enter=gsm_bt` quand le module annonce une
+  lecture (ligne `MB` ou nouveau titre), sauf si un lecteur Android joue ou si une autre source MTC s'est
+  annoncée depuis notre dernière prise du son (le bouton « Musique BT » lève ce blocage). Décisions tracées
+  dans le logcat, étiquette `FocusBT`.
 - **Les modules Xposed ne sont pas chargés** : le journal Xposed indique `modules.list was not found`.
   MTCSound et les modules mvgv70 sont installés mais inactifs ; ils ne peuvent pas interférer.
 
@@ -104,7 +115,8 @@ app/src/main/java/fr/nassim/focuslauncher/
                     activation ADB Wi-Fi (port 5555), IP, paquets MTC, rapport dans Download/
   MediaListener.kt  NotificationListenerService → MediaSessionManager (titre, artiste, pochette)
   BtMusic.kt        musique Bluetooth : suit le journal par root (`logcat -s linlin`), remplit NowPlaying,
-                    position estimée ; cède l'affichage à un lecteur Android qui joue
+                    position estimée ; cède l'affichage à un lecteur Android qui joue ; commandes ⏮ ⏯ ⏭ ;
+                    bascule automatique du son sur le Bluetooth (trace `FocusBT`)
   BtMusicParser.kt  décodage des lignes `BT 6 MI/MA/MB` (Kotlin pur, testé dans app/src/test)
   NowPlaying.kt     état de lecture partagé (`bluetooth` = affichage tenu par BtMusic)
   ObdClient.kt      client ELM327 Bluetooth/Wi-Fi, lecture seule
@@ -130,7 +142,8 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
   `main` à la demande de l'utilisateur (pas de pull request). **Vérifié dans la voiture : l'état des pistes s'affiche.**
 - v14 : accueil épuré, raccourcis Radio et Vidéo retirés du dock, puce Radio retirée de la page Musique.
   Radio et Vidéo restent accessibles par la page Applis et le bouton MODE. Rendu non vérifié dans la voiture.
-- (à venir) boutons ⏮ ⏯ ⏭ branchés sur les commandes du service Bluetooth MTC.
+- v15 : boutons ⏮ ⏯ ⏭ branchés sur les commandes du service Bluetooth MTC. Non vérifié dans la voiture.
+- (à venir) bascule automatique du son sur le Bluetooth quand le téléphone joue.
 
 ## Navigation : ce qui est établi (06/11/2026)
 - Aucune appli de navigation installée (seulement `com.microntek.navgear`, le lanceur MTC). La tuile
@@ -150,8 +163,10 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 - [x] Titre/artiste de la musique Bluetooth (`BtMusic`, v13) : affichage confirmé dans la voiture.
       Restent à observer : reprise après redémarrage du launcher, bascule vers un lecteur SD/USB.
 - [ ] Son après redémarrage : l'utilisateur rapporte qu'il faut appuyer sur « Essai : son Bluetooth » pour
-      avoir le son. **Mis de côté à sa demande.** Essai discriminant à faire : après redémarrage, appui court sur
-      « Musique BT » *sans avoir ouvert le Diagnostic* (son ouverture lance une lecture du canal 2 fois par seconde).
+      avoir le son. Corrigé dans le code par une **bascule automatique** (`BtMusic.switchToBluetooth`) dès que le
+      module annonce une lecture, **à valider dans la voiture**. Si le son ne vient toujours pas : relever
+      `adb logcat -s FocusBT` et `su -c dmesg | grep "mtc enter"` ; essai discriminant restant : appui court sur
+      « Musique BT » *sans avoir ouvert le Diagnostic* (son ouverture lit le canal 2 fois par seconde).
 - [ ] Boutons ⏮ ⏯ ⏭ en Bluetooth : les touches média Android sont sans effet (constaté dans la voiture en v13).
       Corrigé dans le code via les broadcasts du service MTC (`BtMusic.command`), **à valider dans la voiture**.
 - [ ] Liste blanche MTCB (appli non tuée à la coupure du contact).

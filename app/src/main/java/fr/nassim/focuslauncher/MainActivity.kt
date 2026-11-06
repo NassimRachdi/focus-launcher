@@ -83,7 +83,7 @@ class MainActivity : Activity() {
         setupAppsGrid()
         setupUpdate()
         showPage(prefs.getInt("page", 0))
-        BtMusic.start() // titre / artiste de la musique Bluetooth (suivi du journal par root)
+        BtMusic.start(this) // musique Bluetooth : titre / artiste (journal par root) et bascule auto du son
     }
 
     override fun onResume() {
@@ -181,6 +181,8 @@ class MainActivity : Activity() {
      */
     private fun openBtMusic() {
         val r = MtcAudio.enterBluetooth(this)
+        BtMusic.sourceTaken()
+        android.util.Log.i("FocusBT", "bouton Musique BT : code $r")
         if (r == 0 || r == MtcAudio.UNKNOWN) toast("Son : Bluetooth")
         else { toast("Bascule refusée (code $r)"); launch("Musique Bluetooth", BT_APP) } // repli : l'appli d'origine
     }
