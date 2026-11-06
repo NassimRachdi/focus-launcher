@@ -65,14 +65,15 @@ Ce qui remonte dépend de la source :
 
 Les boutons ⏮ ⏯ ⏭ fonctionnent dans tous les cas (touches média système en repli).
 
-**Son Bluetooth de l'iPhone** : sur cet autoradio, c'est l'appli Bluetooth d'origine qui bascule la
-source audio sur Bluetooth. Appuie sur **Musique BT** (dock de l'accueil), sur « Musique Bluetooth »
-(page Musique) ou sur « Aucune lecture » : l'appli Bluetooth s'ouvre, le son arrive, puis le bouton
-Home ramène au launcher sans couper la musique.
+**Son Bluetooth de l'iPhone** : sur cet autoradio, le module Bluetooth est séparé d'Android et le
+pilote MTC choisit la source du son. **Musique BT** (dock de l'accueil), « Musique Bluetooth » (page
+Musique) ou « Aucune lecture » envoient la commande de bascule `av_channel_enter=gsm_bt`, sans ouvrir
+l'appli Bluetooth. Le bouton **Téléphone** ouvre toujours l'appli Bluetooth d'origine (qui fait aussi
+la bascule quand on ouvre son onglet musique).
 
-**Diagnostic Bluetooth** : appui long sur **Musique BT**. L'écran affiche le canal audio de
-l'autoradio en direct, l'historique de ses changements, les activités de l'appli Bluetooth et,
-avec root, un extrait du journal système (complet dans `Download/focus-diag-logcat.txt`).
+**Diagnostic Bluetooth** : appui long sur **Musique BT**. Boutons d'essai (son Bluetooth / son
+Android), canal audio en direct, journal du noyau (lignes « --mtc enter … » du pilote MTC) et, avec
+root, extrait du journal système (complet dans `Download/focus-diag-logcat.txt`).
 
 ## 4. Données voiture (OBD-II)
 

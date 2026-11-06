@@ -177,10 +177,13 @@ class MainActivity : Activity() {
     }
 
     /**
-     * Ouvre l'appli Bluetooth d'origine : c'est elle qui bascule la source audio de l'autoradio
-     * sur Bluetooth (vérifié dans la voiture). Le son continue ensuite au retour sur le launcher.
+     * Musique Bluetooth : bascule directement la source audio de l'autoradio sur l'entrée Bluetooth
+     * (voir MtcAudio), sans ouvrir l'appli Bluetooth d'origine. Le bouton « Téléphone » l'ouvre toujours.
      */
-    private fun openBtMusic() = launch("Musique Bluetooth", BT_APP)
+    private fun openBtMusic() {
+        if (MtcAudio.enterBluetooth(this)) toast("Son : Bluetooth")
+        else launch("Musique Bluetooth", BT_APP) // repli : l'appli d'origine fait la bascule
+    }
 
     // ---------------------------------------------------------------- musique
 

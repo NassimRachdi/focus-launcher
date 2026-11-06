@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Typeface
-import android.media.AudioManager
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -24,16 +23,18 @@ import java.util.Locale
 /**
  * Diagnostic de la musique Bluetooth (appui long sur « Musique BT »).
  *
- * But : observer, sans rien deviner, ce que fait l'appli Bluetooth d'origine quand le son arrive.
- *  - canal audio MTC lu en continu (AudioManager.getParameters("av_channel"), lecture seule) ;
+ * Observe, sans rien deviner, ce qui se passe quand le son arrive :
+ *  - canal audio MTC lu en continu (lecture seule, voir MtcAudio) ;
  *  - journal système capturé par root (logcat), filtré à l'écran, complet dans Download ;
- *  - activités de l'appli Bluetooth (pour l'ouvrir directement sur la musique).
- * Le seul bouton qui agit est « Essai », et uniquement avec un canal relevé sur l'autoradio lui-même.
+ *  - journal du noyau (dmesg) : le pilote MTC y écrit « --mtc enter <canal> » à chaque bascule ;
+ *  - activités de l'appli Bluetooth et paquets MTC installés.
+ * Deux boutons d'essai envoient les commandes de bascule documentées (gsm_bt / sys).
  */
 object BtDiag {
     private val fmt = SimpleDateFormat("HH:mm:ss", Locale.FRANCE)
     val history = ArrayList<String>()          // changements de canal audio
     val log = ArrayList<String>()              // lignes de journal retenues
+    val kernel = ArrayList<String>()           // lignes MTC du journal noyau
     @Volatile var channel = "?"
     @Volatile var root = "non testé"
     @Volatile var capturing = false
@@ -41,24 +42,28 @@ object BtDiag {
     @Volatile private var proc: Process? = null
     private var watchUntil = 0L
 
-    private val KEYS = Regex("(?i)av_channel|microntek|mtc|a2dp|avrcp|bluetooth|setparam|audio_channel|bootcheck|btmusic|music")
+    private val KEYS = Regex("(?i)av_channel|microntek|mtc|a2dp|avrcp|bluetooth|setparam|audio_channel|bootcheck|btmusic|music|gsm_bt")
+    /** Bruit sans intérêt : interrogation du Bluetooth Android (éteint sur cet autoradio), chaque seconde. */
+    private val NOISE = Regex("getState\\(\\)|STATE_OFF")
+    private val KERNEL = Regex("(?i)mtc|av_channel|gsm_bt|enter|exit|bt_")
 
     fun now(): String = fmt.format(Date())
+
+    fun note(s: String) {
+        synchronized(history) { history.add("${now()}  $s"); if (history.size > 30) history.removeAt(0) }
+    }
 
     /** Surveille le canal audio pendant 15 min (lecture seule, 2 fois par seconde). */
     fun watch(ctx: Context) {
         watchUntil = System.currentTimeMillis() + 15 * 60_000L
         if (watching) return
         watching = true
-        val am = ctx.applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val app = ctx.applicationContext
         Thread({
             try {
                 while (System.currentTimeMillis() < watchUntil) {
-                    val c = try { am.getParameters("av_channel") ?: "" } catch (e: Exception) { "erreur ${e.message}" }
-                    if (c != channel) {
-                        channel = c
-                        synchronized(history) { history.add("${now()}  ${if (c.isEmpty()) "(vide)" else c}"); if (history.size > 30) history.removeAt(0) }
-                    }
+                    val c = MtcAudio.channel(app)
+                    if (c != channel) { channel = c; note(if (c.isEmpty()) "(illisible)" else c) }
                     Thread.sleep(500)
                 }
             } catch (_: InterruptedException) {
@@ -66,18 +71,39 @@ object BtDiag {
         }, "diag-channel").apply { isDaemon = true }.start()
     }
 
+    /** Lance une commande root et renvoie sa sortie (null si root absent, refusé ou sans réponse). */
+    private fun su(cmd: String, timeoutMs: Long): String? = try {
+        val p = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
+        val out = StringBuilder()
+        val t = Thread({ try { out.append(p.inputStream.bufferedReader().readText()) } catch (_: Exception) {} })
+        t.start(); t.join(timeoutMs)
+        if (t.isAlive) { p.destroy(); null } else out.toString()
+    } catch (_: Exception) { null }
+
     fun checkRoot() {
         root = "test en cours…"
         Thread({
-            root = try {
-                val p = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-                val out = StringBuilder()
-                val t = Thread({ try { out.append(p.inputStream.bufferedReader().readText().trim()) } catch (_: Exception) {} })
-                t.start(); t.join(60_000)
-                if (t.isAlive) { p.destroy(); "pas de réponse (demande root refusée ?)" }
-                else if (out.contains("uid=0")) "OK ($out)" else "refusé (${out.ifEmpty { "aucune sortie" }})"
-            } catch (e: Exception) { "absent (${e.message})" }
+            val o = su("id", 60_000)?.trim()
+            root = when {
+                o == null -> "absent ou refusé"
+                o.contains("uid=0") -> "OK"
+                else -> "refusé (${o.ifEmpty { "aucune sortie" }})"
+            }
         }, "diag-root").apply { isDaemon = true }.start()
+    }
+
+    /** Relit le journal du noyau et garde les lignes du pilote MTC. */
+    fun readKernel(done: () -> Unit) {
+        Thread({
+            val o = su("dmesg", 30_000)
+            synchronized(kernel) {
+                kernel.clear()
+                if (o == null) kernel.add("journal noyau illisible (root ?)")
+                else o.lineSequence().filter { KERNEL.containsMatchIn(it) }.toList().takeLast(40).forEach { kernel.add(it) }
+                if (kernel.isEmpty()) kernel.add("aucune ligne MTC")
+            }
+            done()
+        }, "diag-dmesg").apply { isDaemon = true }.start()
     }
 
     /** Capture root du journal système : tout dans Download/focus-diag-logcat.txt, extrait filtré à l'écran. */
@@ -90,6 +116,7 @@ object BtDiag {
                 catch (e: Exception) { return "Root indisponible : ${e.message}" }
         proc = p
         capturing = true
+        val mine = Regex("\\(\\s*${android.os.Process.myPid()}\\)")
         synchronized(log) { log.clear(); log.add("${now()}  --- début de la capture ---") }
         Thread({
             val end = System.currentTimeMillis() + 10 * 60_000L // arrêt automatique après 10 min
@@ -98,7 +125,7 @@ object BtDiag {
                     p.inputStream.bufferedReader().useLines { lines ->
                         for (l in lines) {
                             w.write(l); w.write("\n")
-                            if (KEYS.containsMatchIn(l) && !l.contains("focuslauncher")) synchronized(log) {
+                            if (KEYS.containsMatchIn(l) && !NOISE.containsMatchIn(l) && !mine.containsMatchIn(l)) synchronized(log) {
                                 log.add(l); if (log.size > 300) log.removeAt(0)
                             }
                             if (!capturing || System.currentTimeMillis() > end) break
@@ -112,7 +139,7 @@ object BtDiag {
                 synchronized(log) { log.add("${now()}  --- fin de la capture ---") }
             }
         }, "diag-logcat").apply { isDaemon = true }.start()
-        return "Capture démarrée : ouvre la musique Bluetooth"
+        return "Capture démarrée"
     }
 
     fun stopCapture() {
@@ -137,27 +164,31 @@ class DiagActivity : Activity() {
 
         val root = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setBackgroundColor(0xFF0B0C0F.toInt()); setPadding(8, 8, 8, 8) }
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val colScroll = ScrollView(this).apply { addView(col) }
-        root.addView(colScroll, LinearLayout.LayoutParams(260, LinearLayout.LayoutParams.MATCH_PARENT))
+        root.addView(ScrollView(this).apply { addView(col) }, LinearLayout.LayoutParams(260, LinearLayout.LayoutParams.MATCH_PARENT))
 
-        fun btn(t: String, f: (Button) -> Unit) = Button(this).apply {
+        fun btn(t: String, f: () -> Unit) = Button(this).apply {
             text = t; textSize = 13f; isAllCaps = false; gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            setOnClickListener { f(this) }
+            setOnClickListener { f() }
             col.addView(this, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         }
-        capBtn = btn("1. Démarrer la capture root") {
+        btn("Essai : son Bluetooth") {
+            val ok = MtcAudio.enterBluetooth(this)
+            BtDiag.note("essai av_channel_enter=gsm_bt" + if (ok) "" else " (refusé)")
+            toast(if (ok) "Commande envoyée : son Bluetooth" else "Commande refusée")
+        }
+        btn("Essai : son Android") {
+            val ok = MtcAudio.enterSystem(this)
+            BtDiag.note("essai av_channel_enter=sys" + if (ok) "" else " (refusé)")
+            toast(if (ok) "Commande envoyée : son Android" else "Commande refusée")
+        }
+        btn("Journal noyau (MTC)") { toast("Lecture…"); BtDiag.readKernel { ui.post { render() } } }
+        capBtn = btn("Capture du journal") {
             if (BtDiag.capturing) { BtDiag.stopCapture(); toast("Capture arrêtée") } else toast(BtDiag.startCapture())
         }
-        btn("2. Ouvrir l'appli Bluetooth") {
+        btn("Ouvrir l'appli Bluetooth") {
             val i = apps.find(arrayOf("Bluetooth"))
             if (i == null) toast("Appli Bluetooth introuvable") else try { startActivity(i) } catch (e: Exception) { toast("Impossible : ${e.message}") }
         }
-        btn("3. Mémoriser le canal actuel") {
-            val c = BtDiag.channel
-            if (c.isEmpty() || c == "?" || c.startsWith("erreur")) toast("Aucun canal lisible")
-            else { prefs().edit().putString("bt_channel", c).apply(); toast("Canal mémorisé : $c"); render() }
-        }
-        btn("4. Essai : basculer sur ce canal") { tryChannel() }
         btn("Enregistrer le rapport") { saveReport() }
         btn("Fermer") { finish() }
 
@@ -179,30 +210,11 @@ class DiagActivity : Activity() {
         override fun run() { if (!resumed) return; render(); ui.postDelayed(this, 1000) }
     }
 
-    private fun prefs() = getSharedPreferences("ui", Context.MODE_PRIVATE)
-
-    /**
-     * Canal mémorisé → AudioManager.setParameters("av_channel_enter=<canal>").
-     * Les valeurs MTC courantes ressemblent à « sys », « fm », « gsm_bt »… : on n'envoie que
-     * celle relevée sur cet autoradio (étape 3), jamais une valeur inventée.
-     */
-    private fun tryChannel() {
-        val raw = prefs().getString("bt_channel", null) ?: run { toast("Mémorise d'abord un canal (étape 3)"); return }
-        val v = raw.substringAfter("=").trim()
-        if (v.isEmpty() || v.contains(";") || v.contains(" ")) { toast("Canal inutilisable : $raw"); return }
-        try {
-            (getSystemService(Context.AUDIO_SERVICE) as AudioManager).setParameters("av_channel_enter=$v")
-            synchronized(BtDiag.history) { BtDiag.history.add("${BtDiag.now()}  essai av_channel_enter=$v") }
-            toast("Essai envoyé : av_channel_enter=$v")
-        } catch (e: Exception) { toast("Refusé : ${e.message}") }
-    }
-
     private fun staticInfo(): String {
         val sb = StringBuilder()
         val pm = packageManager
-        sb.append("Focus Launcher v").append(BuildConfig.VERSION_CODE).append('\n')
         val bt = apps.find(arrayOf("Bluetooth"))?.component
-        sb.append("\nAPPLI BLUETOOTH : ").append(bt?.flattenToShortString() ?: "introuvable").append('\n')
+        sb.append("APPLI BLUETOOTH : ").append(bt?.flattenToShortString() ?: "introuvable").append('\n')
         if (bt != null) try {
             pm.getPackageInfo(bt.packageName, PackageManager.GET_ACTIVITIES).activities?.forEach {
                 sb.append("  ").append(if (it.exported) "[ouvrable] " else "[interne]  ").append(it.name.removePrefix(bt.packageName)).append('\n')
@@ -219,36 +231,39 @@ class DiagActivity : Activity() {
 
     private fun report(): String {
         val sb = StringBuilder()
-        sb.append("Root : ").append(BtDiag.root).append('\n')
-        sb.append("Canal audio actuel : ").append(BtDiag.channel.ifEmpty { "(vide)" }).append('\n')
-        sb.append("Canal mémorisé : ").append(prefs().getString("bt_channel", "aucun")).append('\n')
-        sb.append("Capture : ").append(if (BtDiag.capturing) "EN COURS" else "arrêtée").append('\n')
-        sb.append("\nHISTORIQUE DU CANAL :\n")
+        sb.append("Focus Launcher v").append(BuildConfig.VERSION_CODE)
+            .append("  ·  root : ").append(BtDiag.root)
+            .append("  ·  capture : ").append(if (BtDiag.capturing) "EN COURS" else "arrêtée").append('\n')
+        sb.append("Canal audio actuel : ").append(BtDiag.channel.ifEmpty { "(illisible)" }).append('\n')
+        sb.append("\nHISTORIQUE :\n")
         synchronized(BtDiag.history) { BtDiag.history.forEach { sb.append("  ").append(it).append('\n') } }
+        sb.append("\nJOURNAL NOYAU (MTC) :\n")
+        synchronized(BtDiag.kernel) {
+            if (BtDiag.kernel.isEmpty()) sb.append("  (bouton « Journal noyau »)\n")
+            else BtDiag.kernel.forEach { sb.append(it.take(120)).append('\n') }
+        }
+        sb.append("\nJOURNAL SYSTÈME (les plus récentes en bas) :\n")
+        synchronized(BtDiag.log) { BtDiag.log.takeLast(30).forEach { sb.append(it.take(150)).append('\n') } }
         sb.append('\n').append(info)
-        sb.append("\nJOURNAL (lignes retenues, les plus récentes en bas) :\n")
-        synchronized(BtDiag.log) { BtDiag.log.takeLast(40).forEach { sb.append(it.take(150)).append('\n') } }
         return sb.toString()
     }
 
     private fun render() {
         out.text = report()
-        capBtn.text = if (BtDiag.capturing) "1. Arrêter la capture" else "1. Démarrer la capture root"
+        capBtn.text = if (BtDiag.capturing) "Arrêter la capture" else "Capture du journal"
     }
 
     private fun saveReport() {
         try {
             val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             dir.mkdirs()
-            val f = File(dir, "focus-diag.txt")
             val full = StringBuilder(report())
-            full.append("\nJOURNAL COMPLET RETENU :\n")
+            full.append("\nJOURNAL SYSTÈME COMPLET RETENU :\n")
             synchronized(BtDiag.log) { BtDiag.log.forEach { full.append(it).append('\n') } }
-            f.writeText(full.toString())
+            File(dir, "focus-diag.txt").writeText(full.toString())
             toast("Enregistré : Download/focus-diag.txt")
         } catch (e: Exception) { toast("Échec : ${e.message}") }
     }
 
     private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_LONG).show()
-
 }
