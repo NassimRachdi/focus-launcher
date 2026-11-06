@@ -134,7 +134,7 @@
                 <!-- Raccourcis -->
                 <LinearLayout android:layout_width="match_parent" android:layout_height="92dp" android:layout_marginTop="10dp"
                     android:layout_marginStart="-5dp" android:layout_marginEnd="-5dp" android:orientation="horizontal">
-                    <TextView android:id="@+id/dock_carplay" style="@style/Tile" android:background="@drawable/bg_accent" android:drawableTop="@drawable/ic_carplay" android:text="CarPlay" android:textColor="@color/white" />
+                    <TextView android:id="@+id/dock_bt" style="@style/Tile" android:background="@drawable/bg_accent" android:drawableTop="@drawable/ic_music" android:text="Musique BT" android:textColor="@color/white" />
                     <TextView android:id="@+id/dock_nav" style="@style/Tile" android:drawableTop="@drawable/ic_nav" android:text="Navigation" />
                     <TextView android:id="@+id/dock_radio" style="@style/Tile" android:drawableTop="@drawable/ic_radio" android:text="Radio" />
                     <TextView android:id="@+id/dock_phone" style="@style/Tile" android:drawableTop="@drawable/ic_phone" android:text="Téléphone" />
@@ -174,7 +174,7 @@
                         <ImageButton android:id="@+id/m_next" android:layout_width="58dp" android:layout_height="58dp" android:layout_marginStart="18dp" android:background="@drawable/bg_round" android:src="@drawable/ic_next" android:tint="?attr/fTxt" android:scaleType="center" />
                     </LinearLayout>
                     <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp">
-                        <TextView android:id="@+id/m_carplay" style="@style/Chip" android:background="@drawable/bg_chip_accent" android:text="Ouvrir dans CarPlay" android:textColor="@color/white" />
+                        <TextView android:id="@+id/m_bt" style="@style/Chip" android:background="@drawable/bg_chip_accent" android:text="Musique Bluetooth" android:textColor="@color/white" />
                         <TextView android:id="@+id/m_radio" style="@style/Chip" android:text="Radio" />
                         <TextView android:id="@+id/m_files" style="@style/Chip" android:text="Fichiers SD / USB" />
                     </LinearLayout>

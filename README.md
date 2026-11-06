@@ -65,12 +65,20 @@ Ce qui remonte dépend de la source :
 
 Les boutons ⏮ ⏯ ⏭ fonctionnent dans tous les cas (touches média système en repli).
 
+**Son Bluetooth de l'iPhone** : sur cet autoradio, c'est l'appli Bluetooth d'origine qui bascule la
+source audio sur Bluetooth. Appuie sur **Musique BT** (dock de l'accueil), sur « Musique Bluetooth »
+(page Musique) ou sur « Aucune lecture » : l'appli Bluetooth s'ouvre, le son arrive, puis le bouton
+Home ramène au launcher sans couper la musique.
+
 ## 4. Données voiture (OBD-II)
+
+L'OBD est **désactivé par défaut**. Appui long sur la carte « Liaison OBD » (page Voiture) :
+Désactivé → Bluetooth → Wi-Fi → Désactivé.
 
 1. Branche un dongle **ELM327** (idéalement vLinker, OBDLink ou Vgate) sur la prise OBD sous le volant.
 2. **Bluetooth** : appaire-le dans les paramètres Bluetooth Android de l'écran.
    Le nom doit contenir OBD, ELM, V-LINK, OBDLINK ou VGATE.
-3. **Wi-Fi** : appui long sur la carte « Liaison OBD » pour basculer en mode Wi-Fi (192.168.0.10:35000).
+3. **Wi-Fi** : appui long sur la carte « Liaison OBD » jusqu'au mode Wi-Fi (192.168.0.10:35000).
 
 ⚠️ Sur les MTCB, le Bluetooth est souvent géré par un module à part et pas par Android :
 teste d'abord avec **Torque Lite**. Si Torque ne voit pas le dongle en Bluetooth, prends un
