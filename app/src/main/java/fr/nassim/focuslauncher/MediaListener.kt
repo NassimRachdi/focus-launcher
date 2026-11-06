@@ -24,8 +24,10 @@ class MediaListener : NotificationListenerService(), MediaSessionManager.OnActiv
     private var current: MediaController? = null
 
     private val cb = object : MediaController.Callback() {
-        override fun onMetadataChanged(metadata: MediaMetadata?) { ui.post { readMeta(metadata); NowPlaying.changed() } }
-        override fun onPlaybackStateChanged(state: PlaybackState?) { ui.post { readState(state); NowPlaying.changed() } }
+        override fun onMetadataChanged(metadata: MediaMetadata?) {
+            ui.post { if (!NowPlaying.bluetooth) { readMeta(metadata); NowPlaying.changed() } }
+        }
+        override fun onPlaybackStateChanged(state: PlaybackState?) { ui.post { onState(state) } }
         override fun onSessionDestroyed() { ui.post { attach(null) } }
     }
 
@@ -54,15 +56,29 @@ class MediaListener : NotificationListenerService(), MediaSessionManager.OnActiv
         current = c
         if (c == null) {
             NowPlaying.controller = null
-            NowPlaying.playing = false
+            if (!NowPlaying.bluetooth) NowPlaying.playing = false
             NowPlaying.changed()
             return
         }
         c.registerCallback(cb, ui)
         NowPlaying.controller = c
+        // La musique Bluetooth garde l'affichage tant que ce lecteur Android ne joue pas
+        if (NowPlaying.bluetooth && c.playbackState?.state != PlaybackState.STATE_PLAYING) return
+        NowPlaying.bluetooth = false
         NowPlaying.source = sourceName(c.packageName)
         readMeta(c.metadata)
         readState(c.playbackState)
+        NowPlaying.changed()
+    }
+
+    /** Changement d'état du lecteur Android : il reprend l'affichage au Bluetooth seulement s'il se met à jouer. */
+    private fun onState(s: PlaybackState?) {
+        if (NowPlaying.bluetooth) {
+            if (s?.state != PlaybackState.STATE_PLAYING) return
+            NowPlaying.bluetooth = false
+            current?.let { NowPlaying.source = sourceName(it.packageName); readMeta(it.metadata) }
+        }
+        readState(s)
         NowPlaying.changed()
     }
 

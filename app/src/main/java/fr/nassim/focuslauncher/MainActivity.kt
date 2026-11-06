@@ -83,6 +83,7 @@ class MainActivity : Activity() {
         setupAppsGrid()
         setupUpdate()
         showPage(prefs.getInt("page", 0))
+        BtMusic.start() // titre / artiste de la musique Bluetooth (suivi du journal par root)
     }
 
     override fun onResume() {
@@ -290,6 +291,7 @@ class MainActivity : Activity() {
         override fun onReceive(c: Context, i: Intent) {
             if (NowPlaying.controller != null) return
             val t = i.getStringExtra("track") ?: i.getStringExtra("title") ?: return
+            NowPlaying.bluetooth = false
             NowPlaying.title = t
             NowPlaying.artist = i.getStringExtra("artist") ?: ""
             NowPlaying.album = i.getStringExtra("album") ?: ""

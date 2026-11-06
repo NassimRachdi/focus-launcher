@@ -14,6 +14,9 @@ object NowPlaying {
     var source: String = ""
     var playing: Boolean = false
 
+    /** Vrai quand l'affichage vient de la musique Bluetooth (BtMusic) et non d'une session média Android. */
+    var bluetooth: Boolean = false
+
     private var posMs: Long = 0
     private var posAt: Long = 0
     private var speed: Float = 1f
@@ -38,6 +41,6 @@ object NowPlaying {
 
     fun clear() {
         title = ""; artist = ""; album = ""; art = null; durationMs = 0; playing = false
-        posMs = 0; posAt = 0; controller = null; source = ""
+        posMs = 0; posAt = 0; controller = null; source = ""; bluetooth = false
     }
 }

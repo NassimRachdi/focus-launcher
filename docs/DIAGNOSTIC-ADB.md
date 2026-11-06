@@ -75,6 +75,20 @@ Ctrl+C, puis `adb shell su -c dmesg > dmesg2.txt` (le pilote écrit « --mtc ent
 - Dans `com.sevenfloor.mtcsound` : MTCSound remplace le HAL audio ; vérifier qu'il accepte bien
   `av_channel_enter=gsm_bt` et s'il attend d'autres clés.
 
+## 4 bis. Résultats du 06/11/2026
+
+- Section 2 faite ; section 3 (essai comparatif) **non réalisée** : l'autoradio a été redémarré avant, et le
+  défaut ne s'est plus reproduit ensuite (canal `gsm_bt` pris tout seul 45 s après le boot).
+- Xposed : `Cannot load any modules because …/conf/modules.list was not found` → aucun module actif.
+- `com.microntek.bluetooth` : `BlueToothActivity.onCreate` envoie `com.microntek.bootcheck` puis
+  `deviceOn()` = `av_channel_enter=gsm_bt` ; `deviceOff()` = `av_channel_exit=gsm_bt` (onDestroy, sendFinish).
+- Musique : lignes `BT 6 MI…`, `MA`, `MB` dans le logcat (étiquette `linlin`), voir CLAUDE.md et `BtMusicParser`.
+- L'adresse de l'autoradio dépend du réseau : `172.20.10.2` sur le partage de connexion de l'iPhone.
+- La liaison Wi-Fi tombe pendant les gros transferts : copier fichier par fichier avec reprise
+  (`outils/resume_pull.py` dans `Downloads\focus-autoradio-dump`).
+- Pour rester en lecture seule, ne pas utiliser la commande `mkdir /sdcard/diag` de la section 2 :
+  `adb pull` directement depuis le chemin donné par `pm path`.
+
 ## 5. Correction attendue
 
 Reproduire dans `MtcAudio.enterBluetooth` la séquence exacte de `MusicFragment`, puis tester : Musique BT

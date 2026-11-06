@@ -37,11 +37,31 @@ Téléphone : **iPhone**, musique sur **Apple Music**. PC de l'utilisateur : **W
   L'utilisateur rapporte que le bouton « Musique BT » de l'accueil, qui appelle la même fonction
   `MtcAudio.enterBluetooth`, **ne le donne pas** : à confirmer et à expliquer (voir `docs/DIAGNOSTIC-ADB.md`).
 - Ouvrir l'appli Bluetooth d'origine → onglet musique donne aussi le son, qui continue après Home.
+  À l'ouverture elle envoie le broadcast `com.microntek.bootcheck` puis `av_channel_enter=gsm_bt` (lu dans l'APK).
 - Le bouton MODE de la façade change de source (radio, etc.).
+- **Diagnostic ADB du 06/11/2026** : l'écart « Musique BT » / « Essai » n'a **pas été reproduit** ni expliqué.
+  Après un redémarrage, le canal passe sur `gsm_bt` tout seul (45 s après le boot, sans action du launcher)
+  et le son de l'iPhone arrive dès la connexion. Avant ce redémarrage, le journal noyau montrait une
+  alternance `gsm_bt` → `sys` → `gsm_bt` à 0,5 s d'intervalle, auteur du `sys` non identifié.
+- **Les modules Xposed ne sont pas chargés** : le journal Xposed indique `modules.list was not found`.
+  MTCSound et les modules mvgv70 sont installés mais inactifs ; ils ne peuvent pas interférer.
+
+## Titre et artiste en Bluetooth : ce qui est établi
+- Module Bluetooth de type 6 (`cfg_bt=6`). Le service `android.microntek.mtcser` écrit chaque ligne reçue
+  du module dans le journal, étiquette `linlin` : `BT 6 MI<titre>|<artiste>|<durée ms>|<piste>|<total>`,
+  `BT 6 MB` (lecture), `BT 6 MA` (pause). Le séparateur noté `|` est en réalité U+FFFD. `MB` = lecture est confirmé par les horaires
+  capturés (un morceau de 3:18 lancé sous `MB` se termine pile à l'arrivée du titre suivant).
+- Le service **ne rediffuse pas** ces infos pour ce module (ni broadcast, ni session média) ; l'appli Bluetooth
+  d'origine n'affiche pas non plus le titre (`GeneralBtMusic`, l'écran avec titre est réservé à `cfg_bt=3`).
+- Titre de plus de 50 octets : le module le coupe et colle l'artiste derrière sans séparateur.
+- Pas de pochette ni de position dans le morceau : le module ne les envoie pas.
+- Copie complète de `/system` (vérifiée par MD5), journaux et scripts d'analyse :
+  `C:\Users\nassi_hs6y4t9\Downloads\focus-autoradio-dump` (hors dépôt).
 
 ## Contraintes et décisions
 - **Performance d'abord** : aucune dépendance (pas d'AndroidX, `android.useAndroidX=false`), vues
   natives, pas d'animation, données à 1 Hz, `GaugeView` sans allocation dans `onDraw`.
+  Seule exception : JUnit en `testImplementation`, non embarqué dans l'APK.
 - `minSdk 21`, **`targetSdk 22`** volontairement (permissions à l'installation, `file://` autorisé).
 - Design validé par l'utilisateur (maquette 800×480, thème nuit rouge + thème jour). Ne pas changer sans lui demander.
 - **OBD : lecture seule** (mode 01 + `ATRV`), jamais d'écriture vers le véhicule. OBD **désactivé par défaut** (pas de dongle).
@@ -60,6 +80,8 @@ Téléphone : **iPhone**, musique sur **Apple Music**. PC de l'utilisateur : **W
   silencieuse par root** (`pm install -r`), repli sur l'installeur Android. Fonctionne depuis la v9
   (certificats racines récents embarqués dans `res/raw/extra_roots.pem`, voir `Tls.kt`).
 - Méthode de travail : branche `claude/…` → pull request → squash merge dans `main` → attendre la coche verte.
+- `.github/workflows/verify.yml` : sur chaque pull request, tests unitaires + `assembleDebug`, sans signature
+  ni publication. `build.yml` lance aussi les tests avant de compiler la version publiée.
 
 ### Erreurs déjà rencontrées et corrigées
 1. `resource style/T not found` → style `T.Label` sans parent explicite ; tout style avec un point doit avoir `parent=""`.
@@ -76,7 +98,10 @@ app/src/main/java/fr/nassim/focuslauncher/
   DiagActivity.kt   écran Diagnostic : essais gsm_bt/sys, journal noyau (dmesg), capture logcat root,
                     activation ADB Wi-Fi (port 5555), IP, paquets MTC, rapport dans Download/
   MediaListener.kt  NotificationListenerService → MediaSessionManager (titre, artiste, pochette)
-  NowPlaying.kt     état de lecture partagé
+  BtMusic.kt        musique Bluetooth : suit le journal par root (`logcat -s linlin`), remplit NowPlaying,
+                    position estimée ; cède l'affichage à un lecteur Android qui joue
+  BtMusicParser.kt  décodage des lignes `BT 6 MI/MA/MB` (Kotlin pur, testé dans app/src/test)
+  NowPlaying.kt     état de lecture partagé (`bluetooth` = affichage tenu par BtMusic)
   ObdClient.kt      client ELM327 Bluetooth/Wi-Fi, lecture seule
   AppResolver.kt    applis par libellé, renommage, masquage
   GaugeView.kt      jauge demi-cercle
@@ -103,7 +128,9 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
       avec ce que fait `MusicFragment` de `com.microntek.bluetooth` (décompiler l'APK, voir docs/DIAGNOSTIC-ADB.md).
 - [ ] Une fois la bascule fiable : la faire automatiquement quand une lecture Bluetooth commence, et revenir
       sur `sys` quand un lecteur Android joue (ne pas casser la radio ni MODE).
-- [ ] Titre/artiste de la musique Bluetooth : l'appli MTC ne publie sans doute pas de MediaSession ;
-      voir ses broadcasts (`com.microntek.bt.report` ?) dans le logcat.
+- [ ] Titre/artiste de la musique Bluetooth : écrit (`BtMusic`), **à valider dans la voiture** : affichage
+      du titre, icône lecture/pause, reprise après redémarrage du launcher, bascule vers un lecteur SD/USB.
+- [ ] Boutons ⏮ ⏯ ⏭ en Bluetooth : non vérifiés. L'appli d'origine passe par le service MTC
+      (`musicplaypause`, `musicnext`, `musicpre`) ; à étudier si les touches média ne suffisent pas.
 - [ ] Liste blanche MTCB (appli non tuée à la coupure du contact).
 - [ ] Vérifier le rendu de l'accueil avec la densité forcée (date, boutons du lecteur).

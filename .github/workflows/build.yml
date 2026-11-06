@@ -35,6 +35,9 @@ jobs:
             echo "::warning::Secret KEYSTORE_BASE64 absent : APK signé en debug, les mises à jour automatiques ne fonctionneront pas."
           fi
 
+      - name: Tests (décodage des lignes Bluetooth réelles)
+        run: gradle :app:testDebugUnitTest --no-daemon
+
       - name: Compilation
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}

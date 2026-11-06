@@ -56,3 +56,8 @@ android {
         abortOnError = false
     }
 }
+
+// Tests uniquement : rien de ceci n'est embarqué dans l'APK (l'appli reste sans dépendance).
+dependencies {
+    testImplementation("junit:junit:4.13.2")
+}
