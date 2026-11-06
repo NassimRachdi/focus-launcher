@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.res.Configuration
+import android.util.DisplayMetrics
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
 import android.os.Bundle
@@ -50,6 +52,19 @@ class MainActivity : Activity() {
     private val navs = intArrayOf(R.id.nav_home, R.id.nav_music, R.id.nav_car, R.id.nav_apps)
 
     // ---------------------------------------------------------------- cycle de vie
+
+    /**
+     * La maquette validée est dessinée pour 800×480 avec 1 dp = 1 px (densité 160).
+     * L'autoradio annonce une densité plus élevée : l'accueil ne tient plus en hauteur
+     * (date et commandes du lecteur rognées). On force donc 160 pour ce launcher uniquement.
+     * Aucun effet si l'écran est déjà à 160 ou moins.
+     */
+    override fun attachBaseContext(base: Context) {
+        val cfg = Configuration(base.resources.configuration)
+        if (cfg.densityDpi <= DisplayMetrics.DENSITY_MEDIUM) { super.attachBaseContext(base); return }
+        cfg.densityDpi = DisplayMetrics.DENSITY_MEDIUM
+        super.attachBaseContext(base.createConfigurationContext(cfg))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         prefs = getSharedPreferences("ui", Context.MODE_PRIVATE)
@@ -136,7 +151,7 @@ class MainActivity : Activity() {
     // ---------------------------------------------------------------- raccourcis
 
     private fun setupDock() {
-        bindLaunch(R.id.dock_carplay, "CarPlay", CARPLAY, CARPLAY_PKG, 0xFFFFFFFF.toInt())
+        v<TextView>(R.id.dock_bt).apply { tintTop(this, 0xFFFFFFFF.toInt()); press(this); setOnClickListener { openBtMusic() } }
         bindLaunch(R.id.dock_nav, "Navigation", arrayOf("Navigation", "Waze", "Maps"), arrayOf("com.waze", "com.google.android.apps.maps"), cTxt)
         bindLaunch(R.id.dock_radio, "Radio", arrayOf("Radio"), emptyArray(), cTxt)
         bindLaunch(R.id.dock_phone, "Téléphone", arrayOf("Bluetooth"), emptyArray(), cTxt)
@@ -157,6 +172,12 @@ class MainActivity : Activity() {
         try { startActivity(i) } catch (e: Exception) { toast("Impossible d'ouvrir $name") }
     }
 
+    /**
+     * Ouvre l'appli Bluetooth d'origine : c'est elle qui bascule la source audio de l'autoradio
+     * sur Bluetooth (vérifié dans la voiture). Le son continue ensuite au retour sur le launcher.
+     */
+    private fun openBtMusic() = launch("Musique Bluetooth", BT_APP)
+
     // ---------------------------------------------------------------- musique
 
     private val mediaChanged: () -> Unit = { renderMedia() }
@@ -165,14 +186,16 @@ class MainActivity : Activity() {
         for (id in intArrayOf(R.id.home_prev, R.id.m_prev)) v<ImageButton>(id).apply { press(this); setOnClickListener { media(KeyEvent.KEYCODE_MEDIA_PREVIOUS) } }
         for (id in intArrayOf(R.id.home_next, R.id.m_next)) v<ImageButton>(id).apply { press(this); setOnClickListener { media(KeyEvent.KEYCODE_MEDIA_NEXT) } }
         for (id in intArrayOf(R.id.home_pp, R.id.m_pp)) v<ImageButton>(id).apply { press(this); setOnClickListener { media(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) } }
-        v<TextView>(R.id.m_carplay).apply { press(this); setOnClickListener { launch("CarPlay", CARPLAY, CARPLAY_PKG) } }
+        v<TextView>(R.id.m_bt).apply { press(this); setOnClickListener { openBtMusic() } }
         v<TextView>(R.id.m_radio).apply { press(this); setOnClickListener { launch("Radio", arrayOf("Radio")) } }
         v<TextView>(R.id.m_files).apply { press(this); setOnClickListener { launch("Musique", arrayOf("Musique", "Music")) } }
-        // Sans accès aux notifications, un appui sur le titre ouvre le réglage
+        // Appui sur le titre : réglage d'accès aux notifications s'il manque, sinon musique Bluetooth
         val askAccess = View.OnClickListener {
             if (!MediaListener.isEnabled(this)) {
                 try { startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")) }
                 catch (_: Exception) { toast("Réglage introuvable : voir le README (commande adb)") }
+            } else if (NowPlaying.title.isEmpty()) {
+                openBtMusic()
             }
         }
         v<TextView>(R.id.home_title).setOnClickListener(askAccess)
@@ -205,7 +228,11 @@ class MainActivity : Activity() {
             !MediaListener.isEnabled(this) -> "Activer l'affichage musique"
             else -> "Aucune lecture"
         }
-        val artist = if (has) np.artist else if (!MediaListener.isEnabled(this)) "Appuyez ici une seule fois" else ""
+        val artist = when {
+            has -> np.artist
+            !MediaListener.isEnabled(this) -> "Appuyez ici une seule fois"
+            else -> "Appuyez ici pour la musique Bluetooth"
+        }
         v<TextView>(R.id.home_title).text = title
         v<TextView>(R.id.m_title).text = title
         v<TextView>(R.id.home_artist).text = artist
@@ -270,9 +297,13 @@ class MainActivity : Activity() {
         v<GaugeView>(R.id.g_rpm).setColor(0xFFFF6B3D.toInt())
         v<GaugeView>(R.id.g_volt).setColor(ok)
         val toggle = View.OnLongClickListener {
-            val next = if (prefs.getString("obd", "bt") == "bt") "wifi" else "bt"
+            val next = when (obdMode()) { OBD_OFF -> "bt"; "bt" -> "wifi"; else -> OBD_OFF }
             prefs.edit().putString("obd", next).apply()
-            toast(if (next == "wifi") "OBD : mode Wi-Fi (192.168.0.10)" else "OBD : mode Bluetooth")
+            toast(when (next) {
+                "bt" -> "OBD : mode Bluetooth"
+                "wifi" -> "OBD : mode Wi-Fi (192.168.0.10)"
+                else -> "OBD : désactivé"
+            })
             obd?.stop(); obd = null; startObd()
             true
         }
@@ -281,9 +312,23 @@ class MainActivity : Activity() {
         v<TextView>(R.id.st_obd).setOnClickListener { showPage(2) }
     }
 
+    /** OBD désactivé par défaut : aucun dongle pour l'instant, et on évite tout accès Bluetooth inutile. */
+    private fun obdMode(): String = prefs.getString("obd", OBD_OFF) ?: OBD_OFF
+
     private fun startObd() {
         if (obd != null) return
-        obd = ObdClient(prefs.getString("obd", "bt") ?: "bt", ::renderObd, ::renderObdStatus).also { it.start() }
+        val mode = obdMode()
+        if (mode == OBD_OFF) { renderObdOff(); return }
+        obd = ObdClient(mode, ::renderObd, ::renderObdStatus).also { it.start() }
+    }
+
+    private fun renderObdOff() {
+        v<TextView>(R.id.st_obd).setCompoundDrawablesWithIntrinsicBounds(R.drawable.dot_off, 0, 0, 0)
+        v<TextView>(R.id.c_link).apply {
+            setCompoundDrawablesWithIntrinsicBounds(R.drawable.dot_off, 0, 0, 0)
+            text = "Désactivé"
+        }
+        v<TextView>(R.id.c_link_s).text = "Appui long : activer"
     }
 
     private fun renderObdStatus(connected: Boolean, text: String) {
@@ -454,8 +499,8 @@ class MainActivity : Activity() {
     }
 
     companion object {
-        private val CARPLAY = arrayOf("Autokit", "AutoKit", "ZLink", "CarPlay", "Carlinkit")
-        private val CARPLAY_PKG = arrayOf("com.zjinnova.zlink", "com.carlinkit.autokit")
+        private val BT_APP = arrayOf("Bluetooth")
+        private const val OBD_OFF = "off"
         private val META_ACTIONS = arrayOf(
             "com.android.music.metachanged", "com.android.music.playstatechanged",
             "com.htc.music.metachanged", "fm.last.android.metachanged"
