@@ -13,6 +13,7 @@ import java.net.URL
 import java.net.UnknownHostException
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLException
 
 /**
@@ -26,11 +27,14 @@ object Updater {
     @Volatile private var busy = false
     var pendingApk: String? = null
         private set
+    /** Pour les certificats racines embarqués (voir Tls). */
+    @Volatile private var appCtx: Context? = null
 
     /** Vérifie en arrière-plan. onResult(true) si une version plus récente existe. */
     fun check(ctx: Context, force: Boolean, onResult: (available: Boolean, msg: String) -> Unit) {
         val url = BuildConfig.UPDATE_URL
         if (url.isEmpty()) { onResult(false, "Adresse de mise à jour non configurée"); return }
+        appCtx = ctx.applicationContext
         val prefs = ctx.getSharedPreferences("upd", Context.MODE_PRIVATE)
         val last = prefs.getLong("last", 0)
         if (!force && System.currentTimeMillis() - last < 6 * 3600_000L) return
@@ -63,6 +67,7 @@ object Updater {
         busy = true
         onMsg("Téléchargement de la mise à jour…")
         val app = ctx.applicationContext
+        appCtx = app
         Thread({
             try {
                 // Dossier privé de l'appli : lisible par root et par l'installeur (targetSdk 22, file:// autorisé)
@@ -124,6 +129,7 @@ object Updater {
         // GitHub redirige vers son stockage : on suit les redirections à la main (http→https inclus)
         repeat(6) {
             val c = URL(url).openConnection() as HttpURLConnection
+            if (c is HttpsURLConnection) appCtx?.let { Tls.socketFactory(it) }?.let { c.sslSocketFactory = it }
             c.instanceFollowRedirects = false
             c.connectTimeout = 8000; c.readTimeout = 15000
             c.setRequestProperty("User-Agent", "FocusLauncher")
