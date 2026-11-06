@@ -37,6 +37,7 @@ object BtDiag {
     val kernel = ArrayList<String>()           // lignes MTC du journal noyau
     @Volatile var channel = "?"
     @Volatile var root = "non testé"
+    @Volatile var adbPort = "?"
     @Volatile var capturing = false
     @Volatile private var watching = false
     @Volatile private var proc: Process? = null
@@ -90,6 +91,36 @@ object BtDiag {
                 else -> "refusé (${o.ifEmpty { "aucune sortie" }})"
             }
         }, "diag-root").apply { isDaemon = true }.start()
+    }
+
+    /** Adresses IPv4 de l'autoradio (Wi-Fi), pour « adb connect ». */
+    fun ip(): String = try {
+        java.net.NetworkInterface.getNetworkInterfaces().toList()
+            .flatMap { it.inetAddresses.toList() }
+            .filter { !it.isLoopbackAddress && it is java.net.Inet4Address }
+            .joinToString(", ") { it.hostAddress }
+    } catch (_: Exception) { "" }
+
+    /** Port TCP d'adbd (vide = ADB Wi-Fi inactif). Sans root. */
+    fun readAdbPort() {
+        Thread({
+            adbPort = try {
+                Runtime.getRuntime().exec(arrayOf("getprop", "service.adb.tcp.port")).inputStream.bufferedReader().readText().trim()
+            } catch (_: Exception) { "?" }
+        }, "diag-adbport").apply { isDaemon = true }.start()
+    }
+
+    /**
+     * Active ADB par Wi-Fi (port 5555) jusqu'au prochain redémarrage : adbd est relancé en mode TCP.
+     * Nécessite root. À n'utiliser que sur un Wi-Fi de confiance (partage de connexion du téléphone).
+     */
+    fun enableAdbWifi(done: (Boolean) -> Unit) {
+        Thread({
+            val o = su("setprop service.adb.tcp.port 5555; stop adbd; start adbd; sleep 1; getprop service.adb.tcp.port", 30_000)
+            val ok = o?.trim()?.endsWith("5555") == true
+            if (ok) adbPort = "5555" else readAdbPort()
+            done(ok)
+        }, "diag-adb").apply { isDaemon = true }.start()
     }
 
     /** Relit le journal du noyau et garde les lignes du pilote MTC. */
@@ -189,6 +220,10 @@ class DiagActivity : Activity() {
             val i = apps.find(arrayOf("Bluetooth"))
             if (i == null) toast("Appli Bluetooth introuvable") else try { startActivity(i) } catch (e: Exception) { toast("Impossible : ${e.message}") }
         }
+        btn("Activer ADB Wi-Fi (5555)") {
+            toast("Activation…")
+            BtDiag.enableAdbWifi { ok -> ui.post { toast(if (ok) "ADB Wi-Fi actif : adb connect ${BtDiag.ip()}:5555" else "Échec (root refusé ?)"); render() } }
+        }
         btn("Enregistrer le rapport") { saveReport() }
         btn("Fermer") { finish() }
 
@@ -200,6 +235,7 @@ class DiagActivity : Activity() {
 
         info = staticInfo()
         BtDiag.watch(this)
+        BtDiag.readAdbPort()
         if (BtDiag.root == "non testé") BtDiag.checkRoot()
     }
 
@@ -234,6 +270,8 @@ class DiagActivity : Activity() {
         sb.append("Focus Launcher v").append(BuildConfig.VERSION_CODE)
             .append("  ·  root : ").append(BtDiag.root)
             .append("  ·  capture : ").append(if (BtDiag.capturing) "EN COURS" else "arrêtée").append('\n')
+        sb.append("IP : ").append(BtDiag.ip().ifEmpty { "(pas de Wi-Fi)" })
+            .append("  ·  ADB Wi-Fi : ").append(if (BtDiag.adbPort == "5555") "actif (port 5555)" else if (BtDiag.adbPort.isEmpty() || BtDiag.adbPort == "-1") "inactif" else BtDiag.adbPort).append('\n')
         sb.append("Canal audio actuel : ").append(BtDiag.channel.ifEmpty { "(illisible)" })
             .append("  ·  permission audio : ").append(if (MtcAudio.hasPermission(this)) "OK" else "ABSENTE").append('\n')
         sb.append("\nHISTORIQUE :\n")
