@@ -181,8 +181,9 @@ class MainActivity : Activity() {
      * (voir MtcAudio), sans ouvrir l'appli Bluetooth d'origine. Le bouton « Téléphone » l'ouvre toujours.
      */
     private fun openBtMusic() {
-        if (MtcAudio.enterBluetooth(this)) toast("Son : Bluetooth")
-        else launch("Musique Bluetooth", BT_APP) // repli : l'appli d'origine fait la bascule
+        val r = MtcAudio.enterBluetooth(this)
+        if (r == 0 || r == MtcAudio.UNKNOWN) toast("Son : Bluetooth")
+        else { toast("Bascule refusée (code $r)"); launch("Musique Bluetooth", BT_APP) } // repli : l'appli d'origine
     }
 
     // ---------------------------------------------------------------- musique

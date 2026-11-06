@@ -19,13 +19,31 @@ object MtcAudio {
 
     private fun am(ctx: Context) = ctx.applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-    /** Bascule la sortie de l'autoradio sur l'entrée Bluetooth (musique et appels du téléphone). */
-    fun enterBluetooth(ctx: Context): Boolean = set(ctx, "av_channel_enter=gsm_bt")
+    /** Bascule la sortie de l'autoradio sur l'entrée Bluetooth (musique et appels du téléphone). 0 = accepté. */
+    fun enterBluetooth(ctx: Context): Int = set(ctx, "av_channel_enter=gsm_bt")
 
-    /** Rend la sortie à Android (lecteurs installés sur l'autoradio). */
-    fun enterSystem(ctx: Context): Boolean = set(ctx, "av_channel_enter=sys")
+    /** Rend la sortie à Android (lecteurs installés sur l'autoradio). 0 = accepté. */
+    fun enterSystem(ctx: Context): Int = set(ctx, "av_channel_enter=sys")
 
-    fun set(ctx: Context, kv: String): Boolean = try { am(ctx).setParameters(kv); true } catch (_: Exception) { false }
+    /**
+     * Envoie une paire clé=valeur au HAL audio. Renvoie le code d'AudioFlinger : 0 = accepté,
+     * -1 = refusé (permission MODIFY_AUDIO_SETTINGS absente), autre = erreur.
+     * AudioManager.setParameters jette ce code ; on passe donc par AudioSystem (API cachée,
+     * accessible par réflexion sur Android 5.1) et on se rabat sur AudioManager si besoin.
+     */
+    fun set(ctx: Context, kv: String): Int {
+        try {
+            val m = Class.forName("android.media.AudioSystem").getMethod("setParameters", String::class.java)
+            return (m.invoke(null, kv) as? Int) ?: UNKNOWN
+        } catch (_: Throwable) { }
+        return try { am(ctx).setParameters(kv); UNKNOWN } catch (_: Exception) { ERROR }
+    }
+
+    fun hasPermission(ctx: Context): Boolean =
+        ctx.checkCallingOrSelfPermission("android.permission.MODIFY_AUDIO_SETTINGS") == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    const val UNKNOWN = 1000  // envoyé via AudioManager, résultat inconnu
+    const val ERROR = 1001
 
     /** Canal actuel tel que le rapporte la plateforme ; "" si illisible. Deux formes de clé selon le firmware. */
     fun channel(ctx: Context): String {
