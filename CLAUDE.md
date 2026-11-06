@@ -120,6 +120,19 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 - v9 (#5) : certificats racines → la mise à jour depuis l'autoradio fonctionne.
 - v10 (#6) : permission `MODIFY_AUDIO_SETTINGS` → la bascule fonctionne (bouton d'essai).
 - v11 (#7) : activation ADB Wi-Fi depuis le Diagnostic.
+- v12 (#8) : documentation et CI seulement, fonctionnement identique à la v11.
+- v13 : titre, artiste, durée et lecture/pause de la musique Bluetooth (`BtMusic`). Poussée directement sur
+  `main` à la demande de l'utilisateur (pas de pull request). **Vérifié dans la voiture : l'état des pistes s'affiche.**
+- (à venir) accueil épuré : raccourcis Radio et Vidéo retirés du dock, puce Radio retirée de la page Musique.
+  Radio et Vidéo restent accessibles par la page Applis et le bouton MODE.
+
+## Navigation : ce qui est établi (06/11/2026)
+- Aucune appli de navigation installée (seulement `com.microntek.navgear`, le lanceur MTC). La tuile
+  « Navigation » cherche les libellés Navigation / Waze / Maps.
+- GPU Mali-400 : **OpenGL ES 2.0 seulement** (`ro.opengles.version=131072`). Organic Maps (ES 3.0 exigé) est exclu.
+  OsmAnd actuel exige Android 7 ; seule une ancienne version pourrait tourner, à tester.
+- Mémoire par appli limitée à 48 Mo (`dalvik.vm.heapgrowthlimit`), 1 Go au total.
+- GPS : HAL présent (`gps.rk3188.so`), `ro.factory.hasGPS=false` ; réception réelle **non vérifiée**.
 
 ## À faire ensuite
 - [ ] Comprendre pourquoi « Musique BT » (accueil) ne donne pas le son alors que « Essai : son Bluetooth » le donne
@@ -128,8 +141,11 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
       avec ce que fait `MusicFragment` de `com.microntek.bluetooth` (décompiler l'APK, voir docs/DIAGNOSTIC-ADB.md).
 - [ ] Une fois la bascule fiable : la faire automatiquement quand une lecture Bluetooth commence, et revenir
       sur `sys` quand un lecteur Android joue (ne pas casser la radio ni MODE).
-- [ ] Titre/artiste de la musique Bluetooth : écrit (`BtMusic`), **à valider dans la voiture** : affichage
-      du titre, icône lecture/pause, reprise après redémarrage du launcher, bascule vers un lecteur SD/USB.
+- [x] Titre/artiste de la musique Bluetooth (`BtMusic`, v13) : affichage confirmé dans la voiture.
+      Restent à observer : reprise après redémarrage du launcher, bascule vers un lecteur SD/USB.
+- [ ] Son après redémarrage : l'utilisateur rapporte qu'il faut appuyer sur « Essai : son Bluetooth » pour
+      avoir le son. **Mis de côté à sa demande.** Essai discriminant à faire : après redémarrage, appui court sur
+      « Musique BT » *sans avoir ouvert le Diagnostic* (son ouverture lance une lecture du canal 2 fois par seconde).
 - [ ] Boutons ⏮ ⏯ ⏭ en Bluetooth : non vérifiés. L'appli d'origine passe par le service MTC
       (`musicplaypause`, `musicnext`, `musicpre`) ; à étudier si les touches média ne suffisent pas.
 - [ ] Liste blanche MTCB (appli non tuée à la coupure du contact).

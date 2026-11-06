@@ -158,9 +158,7 @@ class MainActivity : Activity() {
             setOnLongClickListener { startActivity(Intent(this@MainActivity, DiagActivity::class.java)); true }
         }
         bindLaunch(R.id.dock_nav, "Navigation", arrayOf("Navigation", "Waze", "Maps"), arrayOf("com.waze", "com.google.android.apps.maps"), cTxt)
-        bindLaunch(R.id.dock_radio, "Radio", arrayOf("Radio"), emptyArray(), cTxt)
         bindLaunch(R.id.dock_phone, "Téléphone", arrayOf("Bluetooth"), emptyArray(), cTxt)
-        bindLaunch(R.id.dock_video, "Vidéo", arrayOf("Vidéo", "Video"), emptyArray(), cTxt)
         v<TextView>(R.id.dock_all).apply { tintTop(this, cTxt); press(this); setOnClickListener { showPage(3) } }
     }
 
@@ -196,7 +194,6 @@ class MainActivity : Activity() {
         for (id in intArrayOf(R.id.home_next, R.id.m_next)) v<ImageButton>(id).apply { press(this); setOnClickListener { media(KeyEvent.KEYCODE_MEDIA_NEXT) } }
         for (id in intArrayOf(R.id.home_pp, R.id.m_pp)) v<ImageButton>(id).apply { press(this); setOnClickListener { media(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) } }
         v<TextView>(R.id.m_bt).apply { press(this); setOnClickListener { openBtMusic() } }
-        v<TextView>(R.id.m_radio).apply { press(this); setOnClickListener { launch("Radio", arrayOf("Radio")) } }
         v<TextView>(R.id.m_files).apply { press(this); setOnClickListener { launch("Musique", arrayOf("Musique", "Music")) } }
         // Appui sur le titre : réglage d'accès aux notifications s'il manque, sinon musique Bluetooth
         val askAccess = View.OnClickListener {
