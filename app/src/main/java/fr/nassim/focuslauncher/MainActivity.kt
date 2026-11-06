@@ -151,7 +151,11 @@ class MainActivity : Activity() {
     // ---------------------------------------------------------------- raccourcis
 
     private fun setupDock() {
-        v<TextView>(R.id.dock_bt).apply { tintTop(this, 0xFFFFFFFF.toInt()); press(this); setOnClickListener { openBtMusic() } }
+        v<TextView>(R.id.dock_bt).apply {
+            tintTop(this, 0xFFFFFFFF.toInt()); press(this)
+            setOnClickListener { openBtMusic() }
+            setOnLongClickListener { startActivity(Intent(this@MainActivity, DiagActivity::class.java)); true }
+        }
         bindLaunch(R.id.dock_nav, "Navigation", arrayOf("Navigation", "Waze", "Maps"), arrayOf("com.waze", "com.google.android.apps.maps"), cTxt)
         bindLaunch(R.id.dock_radio, "Radio", arrayOf("Radio"), emptyArray(), cTxt)
         bindLaunch(R.id.dock_phone, "Téléphone", arrayOf("Bluetooth"), emptyArray(), cTxt)
