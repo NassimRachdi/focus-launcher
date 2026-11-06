@@ -55,6 +55,10 @@ Téléphone : **iPhone**, musique sur **Apple Music**. PC de l'utilisateur : **W
   d'origine n'affiche pas non plus le titre (`GeneralBtMusic`, l'écran avec titre est réservé à `cfg_bt=3`).
 - Titre de plus de 50 octets : le module le coupe et colle l'artiste derrière sans séparateur.
 - Pas de pochette ni de position dans le morceau : le module ne les envoie pas.
+- **Commandes de lecture** : le service écoute, sans permission, les broadcasts du widget d'origine
+  `com.microntek.widget.btplaypause`, `.btplay`, `.btpause`, `.btprev`, `.next` et envoie au module
+  `AT-MA` (lecture/pause), `AT-ME` (précédent), `AT-MD` (suivant). Il les ignore si la musique du téléphone
+  n'est pas connectée (octet d'état ≠ 1). Lu dans `BlueToothManager.apk` (récepteur `mtcser/d`, module `a/c`).
 - Copie complète de `/system` (vérifiée par MD5), journaux et scripts d'analyse :
   `C:\Users\nassi_hs6y4t9\Downloads\focus-autoradio-dump` (hors dépôt).
 
@@ -66,7 +70,8 @@ Téléphone : **iPhone**, musique sur **Apple Music**. PC de l'utilisateur : **W
 - Design validé par l'utilisateur (maquette 800×480, thème nuit rouge + thème jour). Ne pas changer sans lui demander.
 - **OBD : lecture seule** (mode 01 + `ATRV`), jamais d'écriture vers le véhicule. OBD **désactivé par défaut** (pas de dongle).
 - Ne rien modifier dans `/system` de l'autoradio ; ne pas toucher aux modules Xposed existants ; n'envoyer
-  que des paramètres audio documentés (`av_channel_enter/exit`).
+  que des paramètres audio documentés (`av_channel_enter/exit`) et, pour la musique du téléphone, les
+  broadcasts de commande du widget d'origine (`com.microntek.widget.bt…`, voir plus haut).
 - Applis de l'autoradio retrouvées **par libellé** (`AppResolver`).
 
 ## Dépôt, compilation, mise à jour
@@ -123,8 +128,9 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 - v12 (#8) : documentation et CI seulement, fonctionnement identique à la v11.
 - v13 : titre, artiste, durée et lecture/pause de la musique Bluetooth (`BtMusic`). Poussée directement sur
   `main` à la demande de l'utilisateur (pas de pull request). **Vérifié dans la voiture : l'état des pistes s'affiche.**
-- (à venir) accueil épuré : raccourcis Radio et Vidéo retirés du dock, puce Radio retirée de la page Musique.
-  Radio et Vidéo restent accessibles par la page Applis et le bouton MODE.
+- v14 : accueil épuré, raccourcis Radio et Vidéo retirés du dock, puce Radio retirée de la page Musique.
+  Radio et Vidéo restent accessibles par la page Applis et le bouton MODE. Rendu non vérifié dans la voiture.
+- (à venir) boutons ⏮ ⏯ ⏭ branchés sur les commandes du service Bluetooth MTC.
 
 ## Navigation : ce qui est établi (06/11/2026)
 - Aucune appli de navigation installée (seulement `com.microntek.navgear`, le lanceur MTC). La tuile
@@ -146,7 +152,7 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 - [ ] Son après redémarrage : l'utilisateur rapporte qu'il faut appuyer sur « Essai : son Bluetooth » pour
       avoir le son. **Mis de côté à sa demande.** Essai discriminant à faire : après redémarrage, appui court sur
       « Musique BT » *sans avoir ouvert le Diagnostic* (son ouverture lance une lecture du canal 2 fois par seconde).
-- [ ] Boutons ⏮ ⏯ ⏭ en Bluetooth : non vérifiés. L'appli d'origine passe par le service MTC
-      (`musicplaypause`, `musicnext`, `musicpre`) ; à étudier si les touches média ne suffisent pas.
+- [ ] Boutons ⏮ ⏯ ⏭ en Bluetooth : les touches média Android sont sans effet (constaté dans la voiture en v13).
+      Corrigé dans le code via les broadcasts du service MTC (`BtMusic.command`), **à valider dans la voiture**.
 - [ ] Liste blanche MTCB (appli non tuée à la coupure du contact).
 - [ ] Vérifier le rendu de l'accueil avec la densité forcée (date, boutons du lecteur).

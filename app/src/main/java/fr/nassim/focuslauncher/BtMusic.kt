@@ -1,9 +1,12 @@
 package fr.nassim.focuslauncher
 
+import android.content.Context
+import android.content.Intent
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.view.KeyEvent
 
 /**
  * Titre, artiste, durée et état lecture/pause de la musique Bluetooth.
@@ -35,6 +38,36 @@ object BtMusic {
     private var stateSeen = false
     private var posMs = -1L
     private var posAt = 0L
+
+    /** Vrai si le module annonce une lecture en cours, même quand un lecteur Android tient l'affichage. */
+    val isPlaying: Boolean get() = playing
+
+    /**
+     * Commandes de lecture. Le module Bluetooth ne réagit pas aux touches média Android : le service
+     * MTC (android.microntek.mtcser) écoute ces broadcasts, prévus pour le widget du launcher d'origine,
+     * et les traduit en commandes vers le téléphone (module de type 6 : AT-MA lecture/pause,
+     * AT-MD suivant, AT-ME précédent). Lu dans BlueToothManager.apk ; aucune permission requise.
+     * Le service les ignore tant que le téléphone n'est pas connecté en musique.
+     */
+    private const val ACTION_PLAY_PAUSE = "com.microntek.widget.btplaypause"
+    private const val ACTION_NEXT = "com.microntek.widget.next"
+    private const val ACTION_PREV = "com.microntek.widget.btprev"
+
+    /** Envoie lecture/pause, suivant ou précédent au téléphone (code = KeyEvent.KEYCODE_MEDIA_*). Thread UI. */
+    fun command(ctx: Context, keyCode: Int) {
+        val action = when (keyCode) {
+            KeyEvent.KEYCODE_MEDIA_NEXT -> ACTION_NEXT
+            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> ACTION_PREV
+            else -> ACTION_PLAY_PAUSE
+        }
+        try { ctx.sendBroadcast(Intent(action)) } catch (_: Exception) { return }
+        // « Précédent » ramène au début du morceau (ou au morceau d'avant) : la position repart de zéro.
+        if (keyCode == KeyEvent.KEYCODE_MEDIA_PREVIOUS && posMs >= 0) {
+            posMs = 0L
+            posAt = SystemClock.elapsedRealtime()
+            publish(takeOver = false)
+        }
+    }
 
     /** Lance le suivi (une seule fois pour toute la vie du processus). Sans effet si root est absent. */
     fun start() {

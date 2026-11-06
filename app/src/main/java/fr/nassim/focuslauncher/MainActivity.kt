@@ -210,6 +210,12 @@ class MainActivity : Activity() {
 
     private fun media(code: Int) {
         val c = NowPlaying.controller
+        // Musique Bluetooth : pas de session média et les touches média sont ignorées par le module,
+        // on passe par les commandes du service MTC (voir BtMusic.command).
+        if (NowPlaying.bluetooth || (c == null && BtMusic.isPlaying)) {
+            BtMusic.command(this, code)
+            return
+        }
         if (c != null) {
             val t = c.transportControls
             when (code) {
@@ -219,7 +225,7 @@ class MainActivity : Activity() {
             }
             return
         }
-        // Repli : touche média système (comprise par le lecteur Bluetooth MTCB et la plupart des lecteurs)
+        // Repli : touche média système (comprise par la plupart des lecteurs Android)
         val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val now = SystemClock.uptimeMillis()
         am.dispatchMediaKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, code, 0))
