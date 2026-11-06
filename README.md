@@ -70,6 +70,10 @@ source audio sur Bluetooth. Appuie sur **Musique BT** (dock de l'accueil), sur �
 (page Musique) ou sur « Aucune lecture » : l'appli Bluetooth s'ouvre, le son arrive, puis le bouton
 Home ramène au launcher sans couper la musique.
 
+**Diagnostic Bluetooth** : appui long sur **Musique BT**. L'écran affiche le canal audio de
+l'autoradio en direct, l'historique de ses changements, les activités de l'appli Bluetooth et,
+avec root, un extrait du journal système (complet dans `Download/focus-diag-logcat.txt`).
+
 ## 4. Données voiture (OBD-II)
 
 L'OBD est **désactivé par défaut**. Appui long sur la carte « Liaison OBD » (page Voiture) :

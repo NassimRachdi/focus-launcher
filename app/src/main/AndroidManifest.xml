@@ -34,6 +34,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Diagnostic de la musique Bluetooth (appui long sur « Musique BT ») -->
+        <activity
+            android:name=".DiagActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|navigation|uiMode|density" />
+
         <!-- Lecture de la musique en cours (pochette, titre, progression) via MediaSession -->
         <service
             android:name=".MediaListener"
