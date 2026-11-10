@@ -35,7 +35,7 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
-        <!-- ===== Barre d'état ===== -->
+        <!-- ===== Barre d'état : heure et date au centre ===== -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="30dp"
@@ -45,21 +45,24 @@
             android:paddingEnd="16dp">
 
             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                android:text="Ford Focus" android:textColor="?attr/fMute" android:textSize="13sp" />
-
-            <TextView android:id="@+id/st_update" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginEnd="14dp" android:text="Mise à jour disponible" android:textColor="@color/accent"
-                android:textSize="13sp" android:textStyle="bold" android:visibility="gone" android:clickable="true" />
-
-            <TextView android:id="@+id/st_obd" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginEnd="14dp" android:drawableStart="@drawable/dot_off" android:drawablePadding="5dp"
-                android:gravity="center_vertical" android:text="OBD" android:textColor="?attr/fMute" android:textSize="13sp" android:clickable="true" />
-
-            <TextView android:id="@+id/st_src" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginEnd="14dp" android:text="Bluetooth" android:textColor="?attr/fMute" android:textSize="13sp" />
+                android:singleLine="true" android:text="Ford Focus" android:textColor="?attr/fMute" android:textSize="13sp" />
 
             <TextView android:id="@+id/st_clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="--:--" android:textColor="?attr/fMute" android:textSize="13sp" />
+                android:text="--:--" android:textColor="?attr/fTxt" android:textSize="15sp" android:textStyle="bold" />
+            <TextView android:id="@+id/st_date" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="8dp" android:singleLine="true" android:textColor="?attr/fMute" android:textSize="13sp" />
+
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:gravity="end|center_vertical" android:orientation="horizontal">
+                <TextView android:id="@+id/st_update" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginEnd="14dp" android:singleLine="true" android:text="Mise à jour" android:textColor="@color/accent"
+                    android:textSize="13sp" android:textStyle="bold" android:visibility="gone" android:clickable="true" />
+                <TextView android:id="@+id/st_obd" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginEnd="14dp" android:drawableStart="@drawable/dot_off" android:drawablePadding="5dp"
+                    android:gravity="center_vertical" android:text="OBD" android:textColor="?attr/fMute" android:textSize="13sp" android:clickable="true" />
+                <TextView android:id="@+id/st_src" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:singleLine="true" android:text="Bluetooth" android:textColor="?attr/fMute" android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/fLine" />
@@ -72,72 +75,71 @@
 
                 <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
 
-                    <LinearLayout style="@style/Card" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.05"
-                        android:layout_marginEnd="10dp" android:gravity="center_vertical" android:orientation="vertical" android:paddingStart="18dp">
-                        <TextView android:id="@+id/home_clock" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-light" android:includeFontPadding="false" android:text="--:--"
-                            android:textColor="?attr/fTxt" android:textSize="64sp" />
-                        <TextView android:id="@+id/home_date" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp" android:textColor="?attr/fMute" android:textSize="16sp" />
-                    </LinearLayout>
-
-                    <LinearLayout style="@style/Card" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.4"
-                        android:gravity="center_vertical" android:orientation="horizontal">
-                        <FrameLayout android:layout_width="110dp" android:layout_height="110dp" android:background="@drawable/bg_cover">
-                            <ImageView android:id="@+id/home_cover_ph" android:layout_width="46dp" android:layout_height="46dp" android:layout_gravity="center"
+                    <!-- Musique : bloc principal -->
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+                        android:layout_marginEnd="10dp" android:background="@drawable/bg_card" android:gravity="center_vertical"
+                        android:orientation="horizontal" android:padding="16dp">
+                        <FrameLayout android:layout_width="200dp" android:layout_height="200dp" android:background="@drawable/bg_cover">
+                            <ImageView android:id="@+id/home_cover_ph" android:layout_width="64dp" android:layout_height="64dp" android:layout_gravity="center"
                                 android:alpha="0.8" android:src="@drawable/ic_note" />
                             <ImageView android:id="@+id/home_cover" android:layout_width="match_parent" android:layout_height="match_parent"
                                 android:scaleType="centerCrop" android:visibility="gone" />
                         </FrameLayout>
                         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                            android:layout_marginStart="14dp" android:orientation="vertical">
+                            android:layout_marginStart="16dp" android:orientation="vertical">
                             <TextView android:id="@+id/home_src" style="@style/T.Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="En lecture" />
-                            <TextView android:id="@+id/home_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp"
-                                android:ellipsize="end" android:singleLine="true" android:text="Aucune lecture" android:textColor="?attr/fTxt" android:textSize="19sp" android:textStyle="bold" />
-                            <TextView android:id="@+id/home_artist" android:layout_width="match_parent" android:layout_height="wrap_content"
-                                android:ellipsize="end" android:singleLine="true" android:textColor="?attr/fMute" android:textSize="14sp" />
-                            <ProgressBar android:id="@+id/home_bar" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="4dp"
-                                android:layout_marginTop="10dp" android:max="1000" android:progressDrawable="@drawable/progress_bar" />
+                            <TextView android:id="@+id/home_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+                                android:ellipsize="end" android:singleLine="true" android:text="Aucune lecture" android:textColor="?attr/fTxt" android:textSize="24sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/home_artist" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp"
+                                android:ellipsize="end" android:singleLine="true" android:textColor="?attr/fMute" android:textSize="16sp" />
+                            <ProgressBar android:id="@+id/home_bar" style="@android:style/Widget.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="6dp"
+                                android:layout_marginTop="14dp" android:max="1000" android:progressDrawable="@drawable/progress_bar" />
                             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp">
                                 <TextView android:id="@+id/home_cur" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="0:00" android:textColor="?attr/fMute" android:textSize="11sp" />
                                 <TextView android:id="@+id/home_dur" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0:00" android:textColor="?attr/fMute" android:textSize="11sp" />
                             </LinearLayout>
-                            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp">
-                                <ImageButton android:id="@+id/home_prev" android:layout_width="42dp" android:layout_height="42dp" android:background="@drawable/bg_round" android:src="@drawable/ic_prev" android:tint="?attr/fTxt" android:scaleType="center" />
-                                <ImageButton android:id="@+id/home_pp" android:layout_width="42dp" android:layout_height="42dp" android:layout_marginStart="10dp" android:background="@drawable/bg_round_accent" android:src="@drawable/ic_play" android:scaleType="center" />
-                                <ImageButton android:id="@+id/home_next" android:layout_width="42dp" android:layout_height="42dp" android:layout_marginStart="10dp" android:background="@drawable/bg_round" android:src="@drawable/ic_next" android:tint="?attr/fTxt" android:scaleType="center" />
+                            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp">
+                                <ImageButton android:id="@+id/home_prev" android:layout_width="54dp" android:layout_height="54dp" android:background="@drawable/bg_round" android:src="@drawable/ic_prev" android:tint="?attr/fTxt" android:scaleType="center" />
+                                <ImageButton android:id="@+id/home_pp" android:layout_width="54dp" android:layout_height="54dp" android:layout_marginStart="14dp" android:background="@drawable/bg_round_accent" android:src="@drawable/ic_play" android:scaleType="center" />
+                                <ImageButton android:id="@+id/home_next" android:layout_width="54dp" android:layout_height="54dp" android:layout_marginStart="14dp" android:background="@drawable/bg_round" android:src="@drawable/ic_next" android:tint="?attr/fTxt" android:scaleType="center" />
                             </LinearLayout>
                         </LinearLayout>
                     </LinearLayout>
+
+                    <!-- Raccourcis, en colonne -->
+                    <LinearLayout android:layout_width="124dp" android:layout_height="match_parent" android:orientation="vertical">
+                        <TextView android:id="@+id/dock_nav" style="@style/TileV" android:layout_weight="1.5" android:layout_marginTop="0dp"
+                            android:background="@drawable/bg_nav" android:drawableTop="@drawable/ic_nav" android:text="Navigation" android:textColor="@color/white" android:textSize="14sp" />
+                        <TextView android:id="@+id/dock_bt" style="@style/TileV" android:background="@drawable/bg_accent" android:drawableTop="@drawable/ic_music" android:text="Musique BT" android:textColor="@color/white" />
+                        <TextView android:id="@+id/dock_phone" style="@style/TileV" android:drawableTop="@drawable/ic_phone" android:text="Téléphone" />
+                        <TextView android:id="@+id/dock_all" style="@style/TileV" android:drawableTop="@drawable/ic_more" android:text="Toutes" />
+                    </LinearLayout>
                 </LinearLayout>
 
-                <!-- Indicateurs OBD -->
-                <LinearLayout android:layout_width="match_parent" android:layout_height="88dp" android:layout_marginTop="10dp" android:orientation="horizontal">
-                    <LinearLayout style="@style/Card" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="5dp" android:orientation="vertical">
-                        <TextView style="@style/T.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Temp. moteur" />
-                        <TextView android:id="@+id/h_temp" style="@style/T.Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="--" />
+                <!-- Indicateurs OBD, sur une ligne -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_card" android:gravity="center_vertical" android:orientation="horizontal"
+                    android:paddingStart="16dp" android:paddingEnd="12dp">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="horizontal">
+                        <TextView style="@style/T.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Moteur" />
+                        <TextView android:id="@+id/h_temp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp"
+                            android:singleLine="true" android:text="--" android:textColor="?attr/fTxt" android:textSize="20sp" />
                     </LinearLayout>
-                    <LinearLayout style="@style/Card" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:layout_marginEnd="5dp" android:orientation="vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="horizontal">
                         <TextView style="@style/T.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Batterie" />
-                        <TextView android:id="@+id/h_volt" style="@style/T.Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="--" />
+                        <TextView android:id="@+id/h_volt" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp"
+                            android:singleLine="true" android:text="--" android:textColor="?attr/fTxt" android:textSize="20sp" />
                     </LinearLayout>
-                    <LinearLayout style="@style/Card" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:layout_marginEnd="5dp" android:orientation="vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="horizontal">
                         <TextView style="@style/T.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Régime" />
-                        <TextView android:id="@+id/h_rpm" style="@style/T.Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="--" />
+                        <TextView android:id="@+id/h_rpm" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp"
+                            android:singleLine="true" android:text="--" android:textColor="?attr/fTxt" android:textSize="20sp" />
                     </LinearLayout>
-                    <LinearLayout style="@style/Card" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:orientation="vertical">
-                        <TextView style="@style/T.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Diagnostic" />
-                        <TextView android:id="@+id/h_diag" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:singleLine="true" android:text="--" android:textColor="?attr/fMute" android:textSize="20sp" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.3" android:orientation="horizontal">
+                        <TextView style="@style/T.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Diag." />
+                        <TextView android:id="@+id/h_diag" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp"
+                            android:singleLine="true" android:text="--" android:textColor="?attr/fMute" android:textSize="16sp" />
                     </LinearLayout>
-                </LinearLayout>
-
-                <!-- Raccourcis -->
-                <LinearLayout android:layout_width="match_parent" android:layout_height="92dp" android:layout_marginTop="10dp"
-                    android:layout_marginStart="-5dp" android:layout_marginEnd="-5dp" android:orientation="horizontal">
-                    <TextView android:id="@+id/dock_bt" style="@style/Tile" android:background="@drawable/bg_accent" android:drawableTop="@drawable/ic_music" android:text="Musique BT" android:textColor="@color/white" />
-                    <TextView android:id="@+id/dock_nav" style="@style/Tile" android:drawableTop="@drawable/ic_nav" android:text="Navigation" />
-                    <TextView android:id="@+id/dock_phone" style="@style/Tile" android:drawableTop="@drawable/ic_phone" android:text="Téléphone" />
-                    <TextView android:id="@+id/dock_all" style="@style/Tile" android:drawableTop="@drawable/ic_more" android:text="Toutes" />
                 </LinearLayout>
             </LinearLayout>
 

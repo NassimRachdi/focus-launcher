@@ -22,7 +22,7 @@ class GaugeView @JvmOverloads constructor(
     }
     private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND
-        color = 0xFFE5322D.toInt()
+        color = 0xFF3B82F6.toInt()
     }
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER

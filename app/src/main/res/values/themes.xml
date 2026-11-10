@@ -9,12 +9,12 @@
         <item name="android:fontFamily">sans-serif</item>
     </style>
     <style name="Theme.Focus.Night" parent="Theme.Focus.Base">
-        <item name="fBg">#0B0C0F</item>
-        <item name="fPanel">#15171C</item>
-        <item name="fPanel2">#1C1F26</item>
-        <item name="fLine">#262A33</item>
-        <item name="fTxt">#F2F3F5</item>
-        <item name="fMute">#8A909C</item>
+        <item name="fBg">#080D17</item>
+        <item name="fPanel">#111A2B</item>
+        <item name="fPanel2">#1A2540</item>
+        <item name="fLine">#24304A</item>
+        <item name="fTxt">#EEF2F8</item>
+        <item name="fMute">#8B97AD</item>
         <item name="android:windowBackground">@color/night_bg</item>
     </style>
     <style name="Theme.Focus.Day" parent="Theme.Focus.Base">
@@ -68,6 +68,20 @@
         <item name="android:background">@drawable/bg_card</item>
         <item name="android:clickable">true</item>
         <item name="android:paddingTop">10dp</item>
+    </style>
+    <!-- Tuile d'une colonne (accueil) : même aspect que Tile, empilée en hauteur -->
+    <style name="TileV">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">?attr/fTxt</item>
+        <item name="android:drawablePadding">4dp</item>
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:clickable">true</item>
+        <item name="android:paddingTop">8dp</item>
     </style>
     <style name="Chip">
         <item name="android:layout_width">wrap_content</item>

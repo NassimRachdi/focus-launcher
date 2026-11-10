@@ -66,6 +66,13 @@ Téléphone : **iPhone**, musique sur **Apple Music**. PC de l'utilisateur : **W
   d'origine n'affiche pas non plus le titre (`GeneralBtMusic`, l'écran avec titre est réservé à `cfg_bt=3`).
 - Titre de plus de 50 octets : le module le coupe et colle l'artiste derrière sans séparateur.
 - Pas de pochette ni de position dans le morceau : le module ne les envoie pas.
+- **Pochettes** (`CoverArt`) : cherchées sur Internet à partir du titre et de l'artiste, donc seulement quand
+  l'autoradio a une connexion (partage du téléphone). Source : `https://api.deezer.com/search?q=<artiste titre>`
+  (sans clé ; la syntaxe avancée `artist:"…" track:"…"` ne renvoie rien, la recherche iTunes renvoie des
+  résultats sans rapport pour le rap français). Image `album.cover_medium` (250×250) sur `cdn-images.dzcdn.net`.
+  Racines des certificats (DigiCert Global Root G2, Starfield Root G2) présentes dans le magasin de l'autoradio
+  (vérifié dans la copie de `/system`). `CoverMatch` refuse un résultat dont le titre ou l'artiste ne colle pas :
+  mieux vaut la note de musique qu'une mauvaise pochette. Cache disque `cacheDir/covers`, trace `FocusCover`.
 - **Commandes de lecture** : le service écoute, sans permission, les broadcasts du widget d'origine
   `com.microntek.widget.btplaypause`, `.btplay`, `.btpause`, `.btprev`, `.next` et envoie au module
   `AT-MA` (lecture/pause), `AT-ME` (précédent), `AT-MD` (suivant). Il les ignore si la musique du téléphone
@@ -78,7 +85,10 @@ Téléphone : **iPhone**, musique sur **Apple Music**. PC de l'utilisateur : **W
   natives, pas d'animation, données à 1 Hz, `GaugeView` sans allocation dans `onDraw`.
   Seule exception : JUnit en `testImplementation`, non embarqué dans l'APK.
 - `minSdk 21`, **`targetSdk 22`** volontairement (permissions à l'installation, `file://` autorisé).
-- Design validé par l'utilisateur (maquette 800×480, thème nuit rouge + thème jour). Ne pas changer sans lui demander.
+- Design validé par l'utilisateur (maquette 800×480). Depuis le 10/11/2026, « maquette B » : thème nuit bleu
+  (`accent` #3B82F6), heure et date au centre de la barre d'état, grand bloc musique avec pochette 200 px,
+  colonne de tuiles à droite (Navigation en vert `nav`), indicateurs OBD sur une ligne. Le rouge (`danger`)
+  ne sert plus qu'aux alertes (surchauffe, défauts). Ne pas changer sans lui demander.
 - **OBD : lecture seule** (mode 01 + `ATRV`), jamais d'écriture vers le véhicule. OBD **désactivé par défaut** (pas de dongle).
 - Ne rien modifier dans `/system` de l'autoradio ; ne pas toucher aux modules Xposed existants ; n'envoyer
   que des paramètres audio documentés (`av_channel_enter/exit`) et, pour la musique du téléphone, les
@@ -117,6 +127,8 @@ app/src/main/java/fr/nassim/focuslauncher/
   BtMusic.kt        musique Bluetooth : suit le journal par root (`logcat -s linlin`), remplit NowPlaying,
                     position estimée ; cède l'affichage à un lecteur Android qui joue ; commandes ⏮ ⏯ ⏭ ;
                     bascule automatique du son sur le Bluetooth (trace `FocusBT`)
+  CoverArt.kt       pochettes Bluetooth : recherche Deezer + cache disque, un seul thread (trace `FocusCover`)
+  CoverMatch.kt     choix du bon résultat de recherche (Kotlin pur, testé dans app/src/test)
   BtMusicParser.kt  décodage des lignes `BT 6 MI/MA/MB` (Kotlin pur, testé dans app/src/test)
   NowPlaying.kt     état de lecture partagé (`bluetooth` = affichage tenu par BtMusic)
   ObdClient.kt      client ELM327 Bluetooth/Wi-Fi, lecture seule
@@ -143,7 +155,10 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 - v14 : accueil épuré, raccourcis Radio et Vidéo retirés du dock, puce Radio retirée de la page Musique.
   Radio et Vidéo restent accessibles par la page Applis et le bouton MODE. Rendu non vérifié dans la voiture.
 - v15 : boutons ⏮ ⏯ ⏭ branchés sur les commandes du service Bluetooth MTC. Non vérifié dans la voiture.
-- (à venir) bascule automatique du son sur le Bluetooth quand le téléphone joue.
+- v16 : bascule automatique du son sur le Bluetooth quand le téléphone joue.
+  **Vérifié dans la voiture le 10/11/2026 : son, titres et boutons ⏮ ⏯ ⏭ fonctionnent.**
+- v17 (prévue) : accueil « maquette B » (thème bleu) et pochettes en Bluetooth. Connexion HTTPS vers Deezer
+  depuis l'autoradio et rendu à l'écran non vérifiés dans la voiture.
 
 ## Navigation : ce qui est établi (06/11/2026)
 - Aucune appli de navigation installée (seulement `com.microntek.navgear`, le lanceur MTC). La tuile
@@ -154,20 +169,9 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 - GPS : HAL présent (`gps.rk3188.so`), `ro.factory.hasGPS=false` ; réception réelle **non vérifiée**.
 
 ## À faire ensuite
-- [ ] Comprendre pourquoi « Musique BT » (accueil) ne donne pas le son alors que « Essai : son Bluetooth » le donne
-      (même appel). Pistes : vérifier avec `adb logcat` que le clic envoie bien la commande ; regarder si
-      MicrontekServer ou un module Xposed rebascule le canal quand le launcher est au premier plan ; comparer
-      avec ce que fait `MusicFragment` de `com.microntek.bluetooth` (décompiler l'APK, voir docs/DIAGNOSTIC-ADB.md).
-- [ ] Une fois la bascule fiable : la faire automatiquement quand une lecture Bluetooth commence, et revenir
-      sur `sys` quand un lecteur Android joue (ne pas casser la radio ni MODE).
-- [x] Titre/artiste de la musique Bluetooth (`BtMusic`, v13) : affichage confirmé dans la voiture.
-      Restent à observer : reprise après redémarrage du launcher, bascule vers un lecteur SD/USB.
-- [ ] Son après redémarrage : l'utilisateur rapporte qu'il faut appuyer sur « Essai : son Bluetooth » pour
-      avoir le son. Corrigé dans le code par une **bascule automatique** (`BtMusic.switchToBluetooth`) dès que le
-      module annonce une lecture, **à valider dans la voiture**. Si le son ne vient toujours pas : relever
-      `adb logcat -s FocusBT` et `su -c dmesg | grep "mtc enter"` ; essai discriminant restant : appui court sur
-      « Musique BT » *sans avoir ouvert le Diagnostic* (son ouverture lit le canal 2 fois par seconde).
-- [ ] Boutons ⏮ ⏯ ⏭ en Bluetooth : les touches média Android sont sans effet (constaté dans la voiture en v13).
-      Corrigé dans le code via les broadcasts du service MTC (`BtMusic.command`), **à valider dans la voiture**.
+- [x] Son Bluetooth, bascule automatique après redémarrage, titres et boutons ⏮ ⏯ ⏭ : **confirmés dans la
+      voiture le 10/11/2026 (v16)**. La différence « Musique BT » / « Essai » rapportée en v12 n'est plus constatée.
+- [ ] v17 à vérifier dans la voiture : rendu de l'accueil bleu (rien de rogné), pochettes avec le partage de
+      connexion (`adb logcat -s FocusCover` si rien ne s'affiche : échec TLS, pas de réseau ou aucun résultat).
+- [ ] Revenir sur `sys` quand un lecteur Android joue (ne pas casser la radio ni MODE) : non fait.
 - [ ] Liste blanche MTCB (appli non tuée à la coupure du contact).
-- [ ] Vérifier le rendu de l'accueil avec la densité forcée (date, boutons du lecteur).

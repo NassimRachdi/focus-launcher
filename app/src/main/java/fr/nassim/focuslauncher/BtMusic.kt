@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
@@ -21,7 +22,8 @@ import android.view.KeyEvent
  *
  * La position dans le morceau n'est pas envoyée par le module : elle est estimée à partir de
  * l'heure d'arrivée du titre et des pauses. Elle est inconnue (0:00, barre vide) pour un titre
- * retrouvé dans l'historique du journal au démarrage. Pas de pochette en Bluetooth.
+ * retrouvé dans l'historique du journal au démarrage. Le module n'envoie pas de pochette : elle est
+ * cherchée sur Internet à partir du titre et de l'artiste (voir CoverArt).
  */
 object BtMusic {
 
@@ -41,6 +43,10 @@ object BtMusic {
     private var stateSeen = false
     private var posMs = -1L
     private var posAt = 0L
+
+    /** Pochette du morceau en cours (null tant qu'elle n'est pas trouvée) et morceau auquel elle appartient. */
+    private var cover: Bitmap? = null
+    private var coverKey = ""
 
     /** Vrai si le module annonce une lecture en cours, même quand un lecteur Android tient l'affichage. */
     val isPlaying: Boolean get() = playing
@@ -171,11 +177,18 @@ object BtMusic {
         when (ev) {
             is BtMusicParser.Track -> {
                 track = ev
+                val key = CoverMatch.key(ev.title, ev.artist)
+                if (key != coverKey) { coverKey = key; cover = null }
                 posMs = if (live) 0L else -1L
                 posAt = now
                 if (!stateSeen) playing = ev.title.isNotEmpty()
                 publish(takeOver = true)
                 if (auto && playing) scheduleAutoSwitch()
+                val ctx = appCtx
+                if (cover == null && ctx != null) CoverArt.request(ctx, ev.title, ev.artist) { k, bmp ->
+                    // La réponse arrive après coup : on l'ignore si le morceau a changé entre-temps.
+                    if (bmp != null && k == coverKey) { cover = bmp; publish(takeOver = false) }
+                }
             }
             is BtMusicParser.State -> {
                 stateSeen = true
@@ -209,7 +222,7 @@ object BtMusic {
         np.title = t.title
         np.artist = t.artist
         np.album = ""
-        np.art = null
+        np.art = cover
         np.durationMs = t.durationMs
         np.playing = playing
         np.setPosition(posMs, posAt, 1f)

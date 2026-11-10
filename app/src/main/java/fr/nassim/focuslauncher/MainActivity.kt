@@ -41,12 +41,13 @@ class MainActivity : Activity() {
 
     private var cTxt = 0
     private var cMute = 0
-    private val accent = 0xFFE5322D.toInt()
+    private val accent = 0xFF3B82F6.toInt() // couleur de la marque (bleu)
+    private val danger = 0xFFE5322D.toInt() // alerte : surchauffe, défauts moteur
     private val ok = 0xFF3CCF91.toInt()
     private val warn = 0xFFF2B33D.toInt()
 
     private val fmtTime = SimpleDateFormat("HH:mm", Locale.FRANCE)
-    private val fmtDate = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
+    private val fmtDate = SimpleDateFormat("EEE d MMM", Locale.FRANCE)
 
     private val pages = intArrayOf(R.id.page_home, R.id.page_music, R.id.page_car, R.id.page_apps)
     private val navs = intArrayOf(R.id.nav_home, R.id.nav_music, R.id.nav_car, R.id.nav_apps)
@@ -157,7 +158,7 @@ class MainActivity : Activity() {
             setOnClickListener { openBtMusic() }
             setOnLongClickListener { startActivity(Intent(this@MainActivity, DiagActivity::class.java)); true }
         }
-        bindLaunch(R.id.dock_nav, "Navigation", arrayOf("Navigation", "Waze", "Maps"), arrayOf("com.waze", "com.google.android.apps.maps"), cTxt)
+        bindLaunch(R.id.dock_nav, "Navigation", arrayOf("Navigation", "Waze", "Maps"), arrayOf("com.waze", "com.google.android.apps.maps"), 0xFFFFFFFF.toInt())
         bindLaunch(R.id.dock_phone, "Téléphone", arrayOf("Bluetooth"), emptyArray(), cTxt)
         v<TextView>(R.id.dock_all).apply { tintTop(this, cTxt); press(this); setOnClickListener { showPage(3) } }
     }
@@ -359,7 +360,7 @@ class MainActivity : Activity() {
     private fun renderObd(d: ObdData) {
         d.coolantC?.let {
             v<TextView>(R.id.h_temp).text = "$it °C"
-            v<TextView>(R.id.h_temp).setTextColor(if (it >= 105) accent else cTxt)
+            v<TextView>(R.id.h_temp).setTextColor(if (it >= 105) danger else cTxt)
             v<GaugeView>(R.id.g_temp).set((it - 40) / 80f, "$it")
         }
         d.volts?.let {
@@ -380,11 +381,11 @@ class MainActivity : Activity() {
         d.loadPct?.let { v<TextView>(R.id.c_load).text = "$it %" }
         d.dtcCount?.let { n ->
             val hasMil = d.mil == true
-            v<TextView>(R.id.c_dtc).apply { text = "$n"; setTextColor(if (n > 0) accent else ok) }
+            v<TextView>(R.id.c_dtc).apply { text = "$n"; setTextColor(if (n > 0) danger else ok) }
             v<TextView>(R.id.c_dtc_s).text = if (hasMil) "Voyant moteur allumé" else "Dernier scan : à l'instant"
             v<TextView>(R.id.h_diag).apply {
                 text = if (n == 0) "Aucun défaut" else "$n défaut" + if (n > 1) "s" else ""
-                setTextColor(if (n == 0) ok else accent)
+                setTextColor(if (n == 0) ok else danger)
             }
         }
     }
@@ -476,9 +477,8 @@ class MainActivity : Activity() {
     private fun updateClock() {
         val now = Date()
         val t = fmtTime.format(now)
-        v<TextView>(R.id.home_clock).text = t
         v<TextView>(R.id.st_clock).text = t
-        v<TextView>(R.id.home_date).text = fmtDate.format(now).replaceFirstChar { it.uppercase() }
+        v<TextView>(R.id.st_date).text = fmtDate.format(now)
     }
 
     // ---------------------------------------------------------------- utilitaires
