@@ -187,6 +187,15 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 - Mémoire par appli limitée à 48 Mo (`dalvik.vm.heapgrowthlimit`), 1 Go au total.
 - GPS : HAL présent (`gps.rk3188.so`), `ro.factory.hasGPS=false` ; réception réelle **non vérifiée**.
 
+## Écran partagé Waze + musique (demandé le 15/11/2026)
+- But : voir Waze et la musique en même temps, façon tableau de bord CarPlay. Maquettes (4 couleurs et
+  polices, choix non fait) : https://claude.ai/artifact/JpPqJy39Sugd4vgRQDp3b5
+- Piste : `wm overscan` par root pour réduire la zone des applis, panneaux du lanceur autour. **Non testé.**
+- v21 : boutons d'essai dans le diagnostic (30 s puis retour automatique, et « Rétablir l'écran entier »).
+  L'utilisateur a accepté cette écriture pour l'essai ; résultat attendu de sa part.
+- Root : SuperSU était passé en « Deny+Time » pour le lanceur (titres et pochettes disparus) ; remis sur
+  « Grant » par l'utilisateur le 15/11/2026.
+
 ## À faire ensuite
 - [x] Son Bluetooth, bascule automatique après redémarrage, titres et boutons ⏮ ⏯ ⏭ : **confirmés dans la
       voiture le 10/11/2026 (v16)**. La différence « Musique BT » / « Essai » rapportée en v12 n'est plus constatée.

@@ -123,6 +123,34 @@ object BtDiag {
         }, "diag-adb").apply { isDaemon = true }.start()
     }
 
+    /** Marges de l'essai d'écran partagé (gauche, haut, droite, bas, en pixels) : Waze au centre, 428 × 464. */
+    const val SPLIT_MARGINS = "64,8,308,8"
+    const val SPLIT_SECONDS = 30
+
+    /**
+     * Essai d'écran partagé : réduit la zone d'affichage des applis (« wm overscan », root), attend
+     * [SPLIT_SECONDS] secondes puis rend tout l'écran. Les trois étapes sont dans UNE commande root :
+     * le retour à l'écran entier a lieu même si le lanceur est fermé entre-temps (le réglage
+     * survivrait sinon à un redémarrage). Ne touche pas à /system.
+     */
+    fun splitTest(done: (Boolean) -> Unit) {
+        Thread({
+            val o = su("wm overscan $SPLIT_MARGINS; sleep $SPLIT_SECONDS; wm overscan reset; echo fini", (SPLIT_SECONDS + 30) * 1000L)
+            val ok = o?.contains("fini") == true
+            note(if (ok) "essai écran partagé : terminé, écran entier rétabli" else "essai écran partagé : échec (${o?.trim()?.take(60) ?: "root sans réponse"})")
+            done(ok)
+        }, "diag-split").apply { isDaemon = true }.start()
+    }
+
+    /** Rend tout l'écran aux applis (annule l'essai d'écran partagé). */
+    fun splitReset(done: (Boolean) -> Unit) {
+        Thread({
+            val ok = su("wm overscan reset; echo fini", 20_000)?.contains("fini") == true
+            note(if (ok) "écran entier rétabli" else "rétablissement de l'écran : échec (root ?)")
+            done(ok)
+        }, "diag-split-reset").apply { isDaemon = true }.start()
+    }
+
     /** Relit le journal du noyau et garde les lignes du pilote MTC. */
     fun readKernel(done: () -> Unit) {
         Thread({
@@ -223,6 +251,17 @@ class DiagActivity : Activity() {
         btn("Activer ADB Wi-Fi (5555)") {
             toast("Activation…")
             BtDiag.enableAdbWifi { ok -> ui.post { toast(if (ok) "ADB Wi-Fi actif : adb connect ${BtDiag.ip()}:5555" else "Échec (root refusé ?)"); render() } }
+        }
+        btn("Essai : écran partagé (${BtDiag.SPLIT_SECONDS} s)") {
+            val waze = apps.find(arrayOf("Waze"), arrayOf("com.waze"))
+            if (waze == null) toast("Waze introuvable") else {
+                toast("Waze va s'ouvrir dans une partie de l'écran pendant ${BtDiag.SPLIT_SECONDS} s")
+                BtDiag.splitTest { ok -> ui.post { toast(if (ok) "Essai terminé : écran entier rétabli" else "Essai : échec (root refusé ?)") } }
+                ui.postDelayed({ try { startActivity(waze) } catch (e: Exception) { toast("Impossible d'ouvrir Waze") } }, 2500)
+            }
+        }
+        btn("Rétablir l'écran entier") {
+            BtDiag.splitReset { ok -> ui.post { toast(if (ok) "Écran entier rétabli" else "Échec (root refusé ?)") } }
         }
         btn("Enregistrer le rapport") { saveReport() }
         btn("Fermer") { finish() }
