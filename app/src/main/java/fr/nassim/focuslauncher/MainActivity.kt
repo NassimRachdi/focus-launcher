@@ -173,7 +173,9 @@ class MainActivity : Activity() {
             setOnClickListener { openBtMusic() }
             setOnLongClickListener { startActivity(Intent(this@MainActivity, DiagActivity::class.java)); true }
         }
-        bindLaunch(R.id.dock_nav, "Navigation", arrayOf("Navigation", "Waze", "Maps"), arrayOf("com.waze", "com.google.android.apps.maps"), onAccent)
+        // Maps et Waze avant « Navigation » : ce dernier est le raccourci d'origine (com.microntek.navgear),
+        // qui ouvre l'appli réglée dans l'autoradio et non l'appli GPS installée.
+        bindLaunch(R.id.dock_nav, "Navigation", arrayOf("Maps", "Waze", "Navigation"), arrayOf("com.google.android.apps.maps", "com.waze"), onAccent)
         bindLaunch(R.id.dock_phone, "Téléphone", arrayOf("Bluetooth"), emptyArray(), accent)
         v<TextView>(R.id.dock_all).apply { tintTop(this, accent); press(this); setOnClickListener { showPage(3) } }
     }

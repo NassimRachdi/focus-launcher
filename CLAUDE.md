@@ -168,12 +168,15 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
   **Vérifié dans la voiture le 10/11/2026 : son, titres et boutons ⏮ ⏯ ⏭ fonctionnent.**
 - v17 : accueil « maquette B » (thème bleu) et pochettes en Bluetooth.
   **Vérifié dans la voiture : les pochettes s'affichent avec le partage de connexion.**
-- v18 (prévue) : accueil « Diagonale » noir et or, police Barlow, pochettes 500 px, garde-fou sur la durée.
-  Rendu à l'écran non vérifié dans la voiture.
+- v18 : accueil « Diagonale » noir et or, police Barlow, pochettes 500 px, garde-fou sur la durée.
+  Vu dans la voiture le 15/11/2026 : l'écran convient ; la pochette est parfois trop zoomée (à revoir plus tard).
+- v19 : le bouton Navigation cherche Maps, puis Waze, avant le raccourci d'origine « Navigation ».
 
-## Navigation : ce qui est établi (06/11/2026)
-- Aucune appli de navigation installée (seulement `com.microntek.navgear`, le lanceur MTC). La tuile
-  « Navigation » cherche les libellés Navigation / Waze / Maps.
+## Navigation : ce qui est établi (15/11/2026)
+- Google Maps installé par le Play Store le 15/11/2026 (compte Google ajouté ; Waze refusé : incompatible
+  avec Android 5.1). GPS, fluidité et voix de guidage pendant la musique BT : **non vérifiés**.
+- `com.microntek.navgear` (libellé « Navigation ») ouvre l'appli réglée dans l'autoradio ; constaté : il mène à
+  l'écran d'essai expiré de Car Launcher AG (`altergames.carlauncher`). D'où l'ordre Maps / Waze / Navigation.
 - GPU Mali-400 : **OpenGL ES 2.0 seulement** (`ro.opengles.version=131072`). Organic Maps (ES 3.0 exigé) est exclu.
   OsmAnd actuel exige Android 7 ; seule une ancienne version pourrait tourner, à tester.
 - Mémoire par appli limitée à 48 Mo (`dalvik.vm.heapgrowthlimit`), 1 Go au total.
