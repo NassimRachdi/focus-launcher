@@ -188,6 +188,7 @@ class MainActivity : Activity() {
     }
 
     private fun launch(name: String, labels: Array<String>, pkgs: Array<String> = emptyArray()) {
+        apps.refresh() // la liste datait du dernier passage sur la page Applis : une appli installée depuis était ignorée
         val i = apps.find(labels, pkgs)
         if (i == null) { toast("$name : appli introuvable sur l'écran"); return }
         try { startActivity(i) } catch (e: Exception) { toast("Impossible d'ouvrir $name") }

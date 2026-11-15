@@ -173,8 +173,13 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 - v19 : le bouton Navigation cherche Maps, puis Waze, avant le raccourci d'origine « Navigation ».
 
 ## Navigation : ce qui est établi (15/11/2026)
-- Google Maps installé par le Play Store le 15/11/2026 (compte Google ajouté ; Waze refusé : incompatible
-  avec Android 5.1). GPS, fluidité et voix de guidage pendant la musique BT : **non vérifiés**.
+- **Waze 4.89.0.1** (dernière version pour Android 5.0, APKMirror, installée par clé USB le 15/11/2026) :
+  démarre, affiche la carte et la position à l'arrêt. Suivi en roulant, voix pendant la musique BT : **non vérifiés**.
+  Demande le partage de connexion pendant tout le trajet.
+- Écartés : Waze et HERE WeGo du Play Store (incompatibles Android 5.1), Google Maps du Play Store (figé au
+  démarrage), Sygic (ne s'ouvre pas). Compte Google ajouté sur l'autoradio pour faire marcher le Play Store.
+- v20 : la liste des applis est relue à chaque appui sur un bouton de lancement (avant : seulement à
+  l'ouverture de la page Applis, donc une appli fraîchement installée était ignorée).
 - `com.microntek.navgear` (libellé « Navigation ») ouvre l'appli réglée dans l'autoradio ; constaté : il mène à
   l'écran d'essai expiré de Car Launcher AG (`altergames.carlauncher`). D'où l'ordre Maps / Waze / Navigation.
 - GPU Mali-400 : **OpenGL ES 2.0 seulement** (`ro.opengles.version=131072`). Organic Maps (ES 3.0 exigé) est exclu.
