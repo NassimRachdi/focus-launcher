@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.util.DisplayMetrics
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
 import android.os.Bundle
@@ -41,13 +42,16 @@ class MainActivity : Activity() {
 
     private var cTxt = 0
     private var cMute = 0
-    private val accent = 0xFF3B82F6.toInt() // couleur de la marque (bleu)
+    private var cPanel = 0
+    private val accent = 0xFFD4AF62.toInt() // couleur de la marque (or)
+    private val onAccent = 0xFF050505.toInt() // texte et icônes posés sur l'or
     private val danger = 0xFFE5322D.toInt() // alerte : surchauffe, défauts moteur
     private val ok = 0xFF3CCF91.toInt()
     private val warn = 0xFFF2B33D.toInt()
 
     private val fmtTime = SimpleDateFormat("HH:mm", Locale.FRANCE)
     private val fmtDate = SimpleDateFormat("EEE d MMM", Locale.FRANCE)
+    private val fmtDateLong = SimpleDateFormat("EEE d MMMM", Locale.FRANCE)
 
     private val pages = intArrayOf(R.id.page_home, R.id.page_music, R.id.page_car, R.id.page_apps)
     private val navs = intArrayOf(R.id.nav_home, R.id.nav_music, R.id.nav_car, R.id.nav_apps)
@@ -75,6 +79,9 @@ class MainActivity : Activity() {
 
         cTxt = themeColor(R.attr.fTxt)
         cMute = themeColor(R.attr.fMute)
+        cPanel = themeColor(R.attr.fPanel)
+        loadFonts()
+        applyFont(findViewById(android.R.id.content))
 
         apps = AppResolver(this).also { it.refresh() }
         setupNav()
@@ -139,12 +146,14 @@ class MainActivity : Activity() {
 
     private fun showPage(i: Int) {
         val idx = i.coerceIn(0, pages.size - 1)
+        // L'accueil est en plein écran ; la barre latérale et la barre d'état n'existent que sur les autres pages.
+        findViewById<View>(R.id.shell).visibility = if (idx == 0) View.GONE else View.VISIBLE
         pages.forEachIndexed { k, id -> findViewById<View>(id).visibility = if (k == idx) View.VISIBLE else View.GONE }
         navs.forEachIndexed { k, id ->
             val tv = v<TextView>(id)
             tv.isSelected = k == idx
-            tv.setTextColor(if (k == idx) 0xFFFFFFFF.toInt() else cMute)
-            tintTop(tv, if (k == idx) 0xFFFFFFFF.toInt() else cMute)
+            tv.setTextColor(if (k == idx) onAccent else cMute)
+            tintTop(tv, if (k == idx) onAccent else cMute)
         }
         if (idx == 3) refreshGrid()
         prefs.edit().putInt("page", idx).apply()
@@ -153,14 +162,20 @@ class MainActivity : Activity() {
     // ---------------------------------------------------------------- raccourcis
 
     private fun setupDock() {
+        // Tuiles penchées : Navigation en or, les autres en sombre avec l'icône en or.
+        for (id in intArrayOf(R.id.dock_nav, R.id.dock_bt, R.id.dock_phone, R.id.dock_all)) v<TextView>(id).apply {
+            val main = id == R.id.dock_nav
+            background = SlantDrawable(if (main) accent else cPanel)
+            setTextColor(if (main) onAccent else cTxt)
+        }
         v<TextView>(R.id.dock_bt).apply {
-            tintTop(this, 0xFFFFFFFF.toInt()); press(this)
+            tintTop(this, accent); press(this)
             setOnClickListener { openBtMusic() }
             setOnLongClickListener { startActivity(Intent(this@MainActivity, DiagActivity::class.java)); true }
         }
-        bindLaunch(R.id.dock_nav, "Navigation", arrayOf("Navigation", "Waze", "Maps"), arrayOf("com.waze", "com.google.android.apps.maps"), 0xFFFFFFFF.toInt())
-        bindLaunch(R.id.dock_phone, "Téléphone", arrayOf("Bluetooth"), emptyArray(), cTxt)
-        v<TextView>(R.id.dock_all).apply { tintTop(this, cTxt); press(this); setOnClickListener { showPage(3) } }
+        bindLaunch(R.id.dock_nav, "Navigation", arrayOf("Navigation", "Waze", "Maps"), arrayOf("com.waze", "com.google.android.apps.maps"), onAccent)
+        bindLaunch(R.id.dock_phone, "Téléphone", arrayOf("Bluetooth"), emptyArray(), accent)
+        v<TextView>(R.id.dock_all).apply { tintTop(this, accent); press(this); setOnClickListener { showPage(3) } }
     }
 
     private fun bindLaunch(id: Int, name: String, labels: Array<String>, pkgs: Array<String>, tint: Int) {
@@ -193,6 +208,14 @@ class MainActivity : Activity() {
     private val mediaChanged: () -> Unit = { renderMedia() }
 
     private fun setupMedia() {
+        v<ImageButton>(R.id.home_prev).background = SlantDrawable(cPanel)
+        v<ImageButton>(R.id.home_next).background = SlantDrawable(cPanel)
+        v<ImageButton>(R.id.home_pp).background = SlantDrawable(accent)
+        // Toute la partie gauche de l'accueil est la pochette ; la toucher ouvre la page Musique.
+        v<SlantCoverView>(R.id.home_cover).apply {
+            setColors(themeColor(R.attr.fBg), cPanel, accent)
+            setOnClickListener { showPage(1) }
+        }
         for (id in intArrayOf(R.id.home_prev, R.id.m_prev)) v<ImageButton>(id).apply { press(this); setOnClickListener { media(KeyEvent.KEYCODE_MEDIA_PREVIOUS) } }
         for (id in intArrayOf(R.id.home_next, R.id.m_next)) v<ImageButton>(id).apply { press(this); setOnClickListener { media(KeyEvent.KEYCODE_MEDIA_NEXT) } }
         for (id in intArrayOf(R.id.home_pp, R.id.m_pp)) v<ImageButton>(id).apply { press(this); setOnClickListener { media(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) } }
@@ -258,17 +281,17 @@ class MainActivity : Activity() {
         v<TextView>(R.id.st_src).text = src
 
         val art = np.art
-        for ((img, ph) in arrayOf(R.id.home_cover to R.id.home_cover_ph, R.id.m_cover to 0)) {
-            val iv = v<ImageView>(img)
+        v<SlantCoverView>(R.id.home_cover).setBitmap(art)
+        v<ImageView>(R.id.m_cover).let { iv ->
             if (art != null) { iv.setImageBitmap(art); iv.visibility = View.VISIBLE }
             else { iv.setImageDrawable(null); iv.visibility = View.GONE }
-            if (ph != 0) findViewById<View>(ph).visibility = if (art != null) View.GONE else View.VISIBLE
         }
         val icon = if (np.playing) R.drawable.ic_pause else R.drawable.ic_play
         v<ImageButton>(R.id.home_pp).setImageResource(icon)
         v<ImageButton>(R.id.m_pp).setImageResource(icon)
-        v<TextView>(R.id.home_dur).text = mmss(np.durationMs)
-        v<TextView>(R.id.m_dur).text = mmss(np.durationMs)
+        val dur = if (has && np.durationMs <= 0) "–:––" else mmss(np.durationMs) // durée inconnue
+        v<TextView>(R.id.home_dur).text = dur
+        v<TextView>(R.id.m_dur).text = dur
         renderProgress()
     }
 
@@ -326,14 +349,18 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.c_link_card).setOnLongClickListener(toggle)
         v<TextView>(R.id.st_obd).setOnLongClickListener(toggle)
         v<TextView>(R.id.st_obd).setOnClickListener { showPage(2) }
+        findViewById<View>(R.id.home_car).setOnClickListener { showPage(2) }
     }
 
     /** OBD désactivé par défaut : aucun dongle pour l'instant, et on évite tout accès Bluetooth inutile. */
     private fun obdMode(): String = prefs.getString("obd", OBD_OFF) ?: OBD_OFF
 
     private fun startObd() {
-        if (obd != null) return
         val mode = obdMode()
+        // Accueil : les valeurs moteur quand l'OBD est actif, sinon une simple entrée vers la page Voiture.
+        findViewById<View>(R.id.h_off).visibility = if (mode == OBD_OFF) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.h_vals).visibility = if (mode == OBD_OFF) View.GONE else View.VISIBLE
+        if (obd != null) return
         if (mode == OBD_OFF) { renderObdOff(); return }
         obd = ObdClient(mode, ::renderObd, ::renderObdStatus).also { it.start() }
     }
@@ -375,7 +402,7 @@ class MainActivity : Activity() {
             }
         }
         d.rpm?.let {
-            v<TextView>(R.id.h_rpm).text = "$it"
+            v<TextView>(R.id.h_rpm).text = "$it tr/min"
             v<GaugeView>(R.id.g_rpm).set(it / 6500f, "$it")
         }
         d.loadPct?.let { v<TextView>(R.id.c_load).text = "$it %" }
@@ -398,7 +425,7 @@ class MainActivity : Activity() {
         override fun getItem(p: Int): Any? = if (p < gridItems.size) gridItems[p] else null
         override fun getItemId(p: Int) = p.toLong()
         override fun getView(p: Int, convert: View?, parent: ViewGroup): View {
-            val view = convert ?: layoutInflater.inflate(R.layout.item_app, parent, false)
+            val view = convert ?: layoutInflater.inflate(R.layout.item_app, parent, false).also { applyFont(it) }
             val badge = view.findViewById<View>(R.id.app_badge)
             val icon = view.findViewById<ImageView>(R.id.app_icon)
             val label = view.findViewById<TextView>(R.id.app_label)
@@ -451,11 +478,13 @@ class MainActivity : Activity() {
 
     private fun setupUpdate() {
         v<TextView>(R.id.st_update).setOnClickListener { Updater.install(this, ::toast) }
+        v<TextView>(R.id.home_update).setOnClickListener { Updater.install(this, ::toast) }
     }
 
     /** Vérification automatique (au plus toutes les 6 h) : bandeau en haut si une version existe. */
     private fun onUpdateResult(available: Boolean, msg: String) {
         v<TextView>(R.id.st_update).visibility = if (available) View.VISIBLE else View.GONE
+        v<TextView>(R.id.home_update).visibility = if (available) View.VISIBLE else View.GONE
     }
 
     /** Tuile « Mises à jour » : vérifie tout de suite, affiche le résultat et installe directement. */
@@ -478,6 +507,8 @@ class MainActivity : Activity() {
         val now = Date()
         val t = fmtTime.format(now)
         v<TextView>(R.id.st_clock).text = t
+        v<TextView>(R.id.home_clock).text = t
+        v<TextView>(R.id.home_date).text = fmtDateLong.format(now)
         v<TextView>(R.id.st_date).text = fmtDate.format(now)
     }
 
@@ -486,6 +517,33 @@ class MainActivity : Activity() {
     private val cache = HashMap<Int, View>()
     @Suppress("UNCHECKED_CAST")
     private fun <T : View> v(id: Int): T = cache.getOrPut(id) { findViewById<View>(id) } as T
+
+    /** Police Barlow Semi Condensed embarquée (assets/fonts) : normal, médium, italique, médium italique. */
+    private var fonts: Array<Typeface>? = null
+
+    private fun loadFonts() {
+        fonts = try {
+            arrayOf("Regular", "Medium", "Italic", "MediumItalic")
+                .map { Typeface.createFromAsset(assets, "fonts/BarlowSemiCondensed-$it.ttf") }.toTypedArray()
+        } catch (_: Exception) {
+            null // police illisible : on garde celle d'Android
+        }
+    }
+
+    /** Remplace la police de tous les textes d'une vue, en gardant le gras et l'italique demandés dans le XML. */
+    private fun applyFont(view: View?) {
+        val f = fonts ?: return
+        if (view is TextView) {
+            view.typeface = f[when (view.typeface?.style ?: Typeface.NORMAL) {
+                Typeface.BOLD -> 1
+                Typeface.ITALIC -> 2
+                Typeface.BOLD_ITALIC -> 3
+                else -> 0
+            }]
+        } else if (view is ViewGroup) {
+            for (i in 0 until view.childCount) applyFont(view.getChildAt(i))
+        }
+    }
 
     private fun themeColor(attr: Int): Int {
         val tv = TypedValue()

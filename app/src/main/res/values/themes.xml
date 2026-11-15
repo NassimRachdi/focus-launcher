@@ -9,12 +9,12 @@
         <item name="android:fontFamily">sans-serif</item>
     </style>
     <style name="Theme.Focus.Night" parent="Theme.Focus.Base">
-        <item name="fBg">#080D17</item>
-        <item name="fPanel">#111A2B</item>
-        <item name="fPanel2">#1A2540</item>
-        <item name="fLine">#24304A</item>
-        <item name="fTxt">#EEF2F8</item>
-        <item name="fMute">#8B97AD</item>
+        <item name="fBg">#050505</item>
+        <item name="fPanel">#15130E</item>
+        <item name="fPanel2">#1F1C14</item>
+        <item name="fLine">#2B2619</item>
+        <item name="fTxt">#F3EEE3</item>
+        <item name="fMute">#8F887A</item>
         <item name="android:windowBackground">@color/night_bg</item>
     </style>
     <style name="Theme.Focus.Day" parent="Theme.Focus.Base">
@@ -82,6 +82,21 @@
         <item name="android:background">@drawable/bg_card</item>
         <item name="android:clickable">true</item>
         <item name="android:paddingTop">8dp</item>
+    </style>
+    <!-- Tuile penchée de l'accueil « Diagonale » : le fond (SlantDrawable) est posé par MainActivity -->
+    <style name="TileF">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">5dp</item>
+        <item name="android:layout_marginEnd">5dp</item>
+        <item name="android:gravity">center_horizontal</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">?attr/fTxt</item>
+        <item name="android:drawablePadding">4dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:paddingTop">18dp</item>
+        <item name="android:singleLine">true</item>
     </style>
     <style name="Chip">
         <item name="android:layout_width">wrap_content</item>

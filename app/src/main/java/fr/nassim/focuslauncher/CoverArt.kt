@@ -35,7 +35,11 @@ object CoverArt {
     /** Laisse passer les changements de morceau en rafale (suivant, suivant, suivant) sans rien demander. */
     private const val DEBOUNCE_MS = 400L
     private const val RETRY_AFTER_MS = 30_000L
-    private const val MAX_FILES = 300
+    private const val MAX_FILES = 600 // environ 40 Mo : les pochettes déjà vues restent disponibles hors ligne
+
+    /** Images 500×500 (la pochette occupe toute la hauteur de l'accueil). L'ancien dossier « covers » (250×250) est vidé. */
+    private const val DIR = "covers500"
+    private const val OLD_DIR = "covers"
     private const val MAX_IMAGE_BYTES = 600_000
     private const val MAX_JSON_BYTES = 200_000
 
@@ -52,6 +56,7 @@ object CoverArt {
     private var failAt = 0L
     private var lastKey = ""
     private var lastBmp: Bitmap? = null
+    private var oldDirCleared = false
 
     /**
      * Demande la pochette d'un morceau. [cb] est appelé sur le thread UI avec la clé du morceau
@@ -70,6 +75,10 @@ object CoverArt {
 
     private fun loop() {
         while (true) {
+            if (!oldDirCleared) {
+                oldDirCleared = true
+                try { pending?.ctx?.cacheDir?.let { File(it, OLD_DIR).deleteRecursively() } } catch (_: Exception) {}
+            }
             try {
                 synchronized(lock) {
                     while (pending == null) lock.wait()
@@ -91,7 +100,7 @@ object CoverArt {
 
     private fun resolve(r: Req): Bitmap? {
         if (r.key == lastKey) lastBmp?.let { return it }
-        val file = File(File(r.ctx.cacheDir, "covers"), hash(r.key) + ".jpg")
+        val file = File(File(r.ctx.cacheDir, DIR), hash(r.key) + ".jpg")
         if (file.isFile) {
             decode(file.readBytes())?.let { file.setLastModified(System.currentTimeMillis()); return remember(r.key, it) }
             file.delete() // fichier abîmé : on le redemandera
@@ -108,7 +117,7 @@ object CoverArt {
         if (data != null) for (i in 0 until data.length()) {
             val o = data.optJSONObject(i) ?: continue
             val album = o.optJSONObject("album") ?: continue
-            val url = if (album.isNull("cover_medium")) "" else album.optString("cover_medium")
+            val url = if (album.isNull("cover_big")) "" else album.optString("cover_big")
             cands.add(CoverMatch.Candidate(o.optString("title"), o.optJSONObject("artist")?.optString("name") ?: "", url))
         }
         val url = CoverMatch.pick(cands, r.title, r.artist)
@@ -163,7 +172,7 @@ object CoverArt {
             tmp.writeBytes(bytes)
             if (!tmp.renameTo(file)) tmp.delete()
             val all = dir.listFiles() ?: return
-            if (all.size > MAX_FILES) all.sortedBy { it.lastModified() }.take(all.size - MAX_FILES + 50).forEach { it.delete() }
+            if (all.size > MAX_FILES) all.sortedBy { it.lastModified() }.take(all.size - MAX_FILES + 100).forEach { it.delete() }
         } catch (_: Exception) {
             // cache plein ou indisponible : la pochette reste affichée, elle sera redemandée la prochaine fois
         }

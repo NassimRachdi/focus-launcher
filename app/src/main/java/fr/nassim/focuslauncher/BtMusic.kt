@@ -176,7 +176,11 @@ object BtMusic {
         val now = SystemClock.elapsedRealtime()
         when (ev) {
             is BtMusicParser.Track -> {
-                track = ev
+                // Durée invraisemblable (constaté dans la voiture : « 2730 minutes » après un changement de
+                // morceau) : on la traite comme inconnue et on garde la valeur brute dans le journal.
+                val dur = BtMusicParser.saneDuration(ev.durationMs)
+                if (dur != ev.durationMs) Log.i(TAG, "durée ignorée : ${ev.durationMs} ms (piste ${ev.index}/${ev.total}, direct=$live)")
+                track = if (dur != ev.durationMs) ev.copy(durationMs = dur) else ev
                 val key = CoverMatch.key(ev.title, ev.artist)
                 if (key != coverKey) { coverKey = key; cover = null }
                 posMs = if (live) 0L else -1L

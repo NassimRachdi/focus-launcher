@@ -69,10 +69,14 @@ Téléphone : **iPhone**, musique sur **Apple Music**. PC de l'utilisateur : **W
 - **Pochettes** (`CoverArt`) : cherchées sur Internet à partir du titre et de l'artiste, donc seulement quand
   l'autoradio a une connexion (partage du téléphone). Source : `https://api.deezer.com/search?q=<artiste titre>`
   (sans clé ; la syntaxe avancée `artist:"…" track:"…"` ne renvoie rien, la recherche iTunes renvoie des
-  résultats sans rapport pour le rap français). Image `album.cover_medium` (250×250) sur `cdn-images.dzcdn.net`.
+  résultats sans rapport pour le rap français). Image `album.cover_big` (500×500) sur `cdn-images.dzcdn.net`.
   Racines des certificats (DigiCert Global Root G2, Starfield Root G2) présentes dans le magasin de l'autoradio
   (vérifié dans la copie de `/system`). `CoverMatch` refuse un résultat dont le titre ou l'artiste ne colle pas :
-  mieux vaut la note de musique qu'une mauvaise pochette. Cache disque `cacheDir/covers`, trace `FocusCover`.
+  mieux vaut la note de musique qu'une mauvaise pochette. Cache disque `cacheDir/covers500` (600 images au plus), trace `FocusCover`.
+  Une pochette déjà trouvée s'affiche ensuite sans connexion ; sans aucune connexion, pas de pochette possible.
+- Durée : après un changement de morceau, l'utilisateur a vu « 2730 minutes » à droite de la barre (15/11/2026).
+  Cause non identifiée ; `BtMusicParser.saneDuration` ignore toute durée de plus de 6 h (affichage « –:–– ») et
+  `BtMusic` écrit la valeur brute dans le journal (`FocusBT`, « durée ignorée »).
 - **Commandes de lecture** : le service écoute, sans permission, les broadcasts du widget d'origine
   `com.microntek.widget.btplaypause`, `.btplay`, `.btpause`, `.btprev`, `.next` et envoie au module
   `AT-MA` (lecture/pause), `AT-ME` (précédent), `AT-MD` (suivant). Il les ignore si la musique du téléphone
@@ -85,10 +89,14 @@ Téléphone : **iPhone**, musique sur **Apple Music**. PC de l'utilisateur : **W
   natives, pas d'animation, données à 1 Hz, `GaugeView` sans allocation dans `onDraw`.
   Seule exception : JUnit en `testImplementation`, non embarqué dans l'APK.
 - `minSdk 21`, **`targetSdk 22`** volontairement (permissions à l'installation, `file://` autorisé).
-- Design validé par l'utilisateur (maquette 800×480). Depuis le 10/11/2026, « maquette B » : thème nuit bleu
-  (`accent` #3B82F6), heure et date au centre de la barre d'état, grand bloc musique avec pochette 200 px,
-  colonne de tuiles à droite (Navigation en vert `nav`), indicateurs OBD sur une ligne. Le rouge (`danger`)
-  ne sert plus qu'aux alertes (surchauffe, défauts). Ne pas changer sans lui demander.
+- Design validé par l'utilisateur le 15/11/2026 : **maquette F « Diagonale », noir et or**. Accueil en plein écran
+  (sans barre latérale ni barre d'état) : toute la partie gauche est la pochette, coupée en biais par un trait
+  doré (`SlantCoverView`) ; à droite l'heure en italique, le titre, les boutons et quatre tuiles penchées
+  (`SlantDrawable`), Navigation en or ; en bas la ligne moteur. Toucher la pochette ouvre Musique, la ligne
+  moteur ouvre Voiture, « Toutes » ouvre Applis ; la barre latérale (dont jour/nuit) reste sur ces trois pages.
+  Couleurs : `accent` #D4AF62, texte sur l'or `on_accent` #050505, fond #050505 ; le rouge (`danger`) ne sert
+  qu'aux alertes. Police **Barlow Semi Condensed** (licence OFL, `assets/fonts`), appliquée par
+  `MainActivity.applyFont`. Ne pas changer sans lui demander.
 - **OBD : lecture seule** (mode 01 + `ATRV`), jamais d'écriture vers le véhicule. OBD **désactivé par défaut** (pas de dongle).
 - Ne rien modifier dans `/system` de l'autoradio ; ne pas toucher aux modules Xposed existants ; n'envoyer
   que des paramètres audio documentés (`av_channel_enter/exit`) et, pour la musique du téléphone, les
@@ -128,6 +136,7 @@ app/src/main/java/fr/nassim/focuslauncher/
                     position estimée ; cède l'affichage à un lecteur Android qui joue ; commandes ⏮ ⏯ ⏭ ;
                     bascule automatique du son sur le Bluetooth (trace `FocusBT`)
   CoverArt.kt       pochettes Bluetooth : recherche Deezer + cache disque, un seul thread (trace `FocusCover`)
+  Slant.kt          formes penchées de l'accueil : SlantDrawable (tuiles, boutons), SlantCoverView (pochette)
   CoverMatch.kt     choix du bon résultat de recherche (Kotlin pur, testé dans app/src/test)
   BtMusicParser.kt  décodage des lignes `BT 6 MI/MA/MB` (Kotlin pur, testé dans app/src/test)
   NowPlaying.kt     état de lecture partagé (`bluetooth` = affichage tenu par BtMusic)
@@ -157,8 +166,10 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 - v15 : boutons ⏮ ⏯ ⏭ branchés sur les commandes du service Bluetooth MTC. Non vérifié dans la voiture.
 - v16 : bascule automatique du son sur le Bluetooth quand le téléphone joue.
   **Vérifié dans la voiture le 10/11/2026 : son, titres et boutons ⏮ ⏯ ⏭ fonctionnent.**
-- v17 (prévue) : accueil « maquette B » (thème bleu) et pochettes en Bluetooth. Connexion HTTPS vers Deezer
-  depuis l'autoradio et rendu à l'écran non vérifiés dans la voiture.
+- v17 : accueil « maquette B » (thème bleu) et pochettes en Bluetooth.
+  **Vérifié dans la voiture : les pochettes s'affichent avec le partage de connexion.**
+- v18 (prévue) : accueil « Diagonale » noir et or, police Barlow, pochettes 500 px, garde-fou sur la durée.
+  Rendu à l'écran non vérifié dans la voiture.
 
 ## Navigation : ce qui est établi (06/11/2026)
 - Aucune appli de navigation installée (seulement `com.microntek.navgear`, le lanceur MTC). La tuile
@@ -171,7 +182,7 @@ docs/DIAGNOSTIC-ADB.md                      procédure ADB Wi-Fi et analyse en c
 ## À faire ensuite
 - [x] Son Bluetooth, bascule automatique après redémarrage, titres et boutons ⏮ ⏯ ⏭ : **confirmés dans la
       voiture le 10/11/2026 (v16)**. La différence « Musique BT » / « Essai » rapportée en v12 n'est plus constatée.
-- [ ] v17 à vérifier dans la voiture : rendu de l'accueil bleu (rien de rogné), pochettes avec le partage de
-      connexion (`adb logcat -s FocusCover` si rien ne s'affiche : échec TLS, pas de réseau ou aucun résultat).
+- [ ] v18 à vérifier dans la voiture : rendu de l'accueil Diagonale (rien de rogné, police lisible, thème jour),
+      durée « –:–– » au lieu de « 2730 » (relever `adb logcat -s FocusBT` si cela se reproduit).
 - [ ] Revenir sur `sys` quand un lecteur Android joue (ne pas casser la radio ni MODE) : non fait.
 - [ ] Liste blanche MTCB (appli non tuée à la coupure du contact).

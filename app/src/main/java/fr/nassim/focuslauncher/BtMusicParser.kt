@@ -32,6 +32,12 @@ object BtMusicParser {
     ) : Event()
     data class State(val playing: Boolean) : Event()
 
+    /** Au-delà, la durée annoncée n'est pas celle d'un morceau (valeur aberrante envoyée par le module). */
+    const val MAX_DURATION_MS = 6 * 3600_000L
+
+    /** Durée utilisable : 0 (inconnue) si la valeur reçue est négative ou invraisemblable. */
+    fun saneDuration(ms: Long): Long = if (ms in 1..MAX_DURATION_MS) ms else 0L
+
     /** Renvoie l'événement porté par une ligne du journal, ou null si la ligne ne concerne pas la musique. */
     fun parse(line: String): Event? {
         val i = line.indexOf(PREFIX)

@@ -53,6 +53,14 @@ class BtMusicParserTest {
         assertEquals(120, t.total)
     }
 
+    @Test fun dureeInvraisemblableIgnoree() {
+        assertEquals(144843L, BtMusicParser.saneDuration(144843L))
+        assertEquals(0L, BtMusicParser.saneDuration(2730L * 60_000L)) // « 2730 minutes » vu dans la voiture
+        assertEquals(0L, BtMusicParser.saneDuration(4294967295L))
+        assertEquals(0L, BtMusicParser.saneDuration(-1L))
+        assertEquals(0L, BtMusicParser.saneDuration(0L))
+    }
+
     @Test fun lectureEtPause() {
         assertEquals(BtMusicParser.State(true), BtMusicParser.parse("BT 6 MB"))
         assertEquals(BtMusicParser.State(false), BtMusicParser.parse("BT 6 MA"))

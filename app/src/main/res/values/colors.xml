@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="accent">#3B82F6</color>
+    <color name="accent">#D4AF62</color>
+    <color name="on_accent">#050505</color>
     <color name="danger">#E5322D</color>
     <color name="nav">#1FA971</color>
     <color name="accent2">#FF6B3D</color>
     <color name="ok">#3CCF91</color>
     <color name="warn">#F2B33D</color>
     <color name="white">#FFFFFF</color>
-    <color name="night_bg">#080D17</color>
+    <color name="night_bg">#050505</color>
     <color name="day_bg">#E9EBEF</color>
 </resources>
